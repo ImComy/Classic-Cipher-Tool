@@ -6,6 +6,8 @@ interface UIState {
   toastMessage: string | null
   toastVisible: boolean
   activeModal: string | null
+  activeWorkspace: 'desk' | 'lab'
+  sessionSidebarOpen: boolean
 }
 
 const initialState: UIState = {
@@ -14,6 +16,8 @@ const initialState: UIState = {
   toastMessage: null,
   toastVisible: false,
   activeModal: null,
+  activeWorkspace: 'desk',
+  sessionSidebarOpen: false,
 }
 
 const uiSlice = createSlice({
@@ -39,10 +43,16 @@ const uiSlice = createSlice({
     closeModal: state => {
       state.activeModal = null
     },
+    setWorkspace: (state, action: PayloadAction<'desk' | 'lab'>) => {
+      state.activeWorkspace = action.payload
+    },
+    setSessionSidebarOpen: (state, action: PayloadAction<boolean>) => {
+      state.sessionSidebarOpen = action.payload
+    },
   },
 })
 
-export const { setStatus, setLastRun, showToast, hideToast, openModal, closeModal } =
+export const { setStatus, setLastRun, showToast, hideToast, openModal, closeModal, setWorkspace, setSessionSidebarOpen } =
   uiSlice.actions
 
 export default uiSlice.reducer

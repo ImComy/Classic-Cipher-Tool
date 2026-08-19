@@ -3,9 +3,7 @@ import { Modal } from '../../components/ui/Modal'
 import { ModularInverseTool } from './ModularInverseTool'
 import { HillMatrixTool } from './HillMatrixTool'
 import { GcdTool } from './GcdTool'
-import { LetterReplaceTool } from './LetterReplaceTool'
 import { AffineCheckTool } from './AffineCheckTool'
-import { CaesarBruteTool } from './CaesarBruteTool'
 
 interface ToolsModalProps {
   isOpen: boolean
@@ -22,26 +20,24 @@ export const ToolsModal: React.FC<ToolsModalProps> = ({ isOpen, onClose }) => {
           <i className="fas fa-tools text-primary-500"></i> Tools
         </>
       }
-      maxWidth="max-w-3xl"
+      maxWidth="max-w-5xl"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Modular Inverse Extended Euclidean */}
-        <ModularInverseTool />
+        {/* Left Column: Modular Inverse - spans both rows */}
+        <div className="md:row-span-2">
+          <ModularInverseTool />
+        </div>
 
-        {/* Hill Matrix Utilities */}
-        <HillMatrixTool />
-
-        {/* GCD */}
+        {/* Right Column Top: GCD */}
         <GcdTool />
 
-        {/* Letter Replace */}
-        <LetterReplaceTool />
-
-        {/* Affine Check */}
+        {/* Right Column Bottom: Affine Check */}
         <AffineCheckTool />
 
-        {/* Caesar Brute Force */}
-        <CaesarBruteTool />
+        {/* Bottom Row: Hill Matrix - spans both columns */}
+        <div className="md:col-span-2">
+          <HillMatrixTool />
+        </div>
       </div>
     </Modal>
   )

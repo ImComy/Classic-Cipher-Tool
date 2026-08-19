@@ -4,6 +4,7 @@ import sessionReducer from './slices/sessionSlice'
 import cipherReducer from './slices/cipherSlice'
 import uiReducer from './slices/uiSlice'
 import stepsReducer from './slices/stepsSlice'
+import labReducer from './slices/labSlice'
 import { persistenceMiddleware } from './middleware/persistence'
 
 export const store = configureStore({
@@ -12,6 +13,7 @@ export const store = configureStore({
     cipher: cipherReducer,
     ui: uiReducer,
     steps: stepsReducer,
+    lab: labReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

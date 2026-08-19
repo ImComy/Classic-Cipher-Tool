@@ -4,7 +4,9 @@ import { loadSessions, updateActiveSessionData } from './store/slices/sessionSli
 import { restoreCipherState } from './store/slices/cipherSlice'
 import { openModal, closeModal } from './store/slices/uiSlice'
 import { Header } from './components/Header'
+import { SessionSidebar } from './components/SessionSidebar'
 import { CipherRunner } from './features/cipher/CipherRunner'
+import { LabWorkspace } from './features/lab/LabWorkspace'
 import { StepsModal } from './components/StepsModal'
 import { TipsModal } from './components/TipsModal'
 import { AnalysisModal } from './features/analysis/AnalysisModal'
@@ -17,7 +19,7 @@ export function App() {
   const dispatch = useAppDispatch()
   const { sessions, activeSessionId, loading } = useAppSelector(state => state.session)
   const { inputText, selectedCipher, operation, keyData } = useAppSelector(state => state.cipher)
-  const activeModal = useAppSelector(state => state.ui.activeModal)
+  const { activeModal, activeWorkspace } = useAppSelector(state => state.ui)
   const isInitialRestore = useRef(false)
 
   // Load sessions from IndexedDB on startup
@@ -63,43 +65,7 @@ export function App() {
       <Header />
 
       <main className="max-w-6xl w-full mx-auto px-3 md:px-6 py-4 md:py-6 flex flex-col gap-4 flex-1">
-        <CipherRunner />
-
-        {/* Feature Buttons */}
-        <div className="flex flex-wrap gap-1.5 px-1">
-          <Button
-            variant="pill"
-            size="sm"
-            data-modal="tipsModal"
-            onClick={() => dispatch(openModal('tipsModal'))}
-          >
-            <i className="fas fa-lightbulb mr-1.5 text-amber-500"></i> Tips
-          </Button>
-          <Button
-            variant="pill"
-            size="sm"
-            data-modal="analysisModal"
-            onClick={() => dispatch(openModal('analysisModal'))}
-          >
-            <i className="fas fa-chart-bar mr-1.5 text-blue-500"></i> Analysis
-          </Button>
-          <Button
-            variant="pill"
-            size="sm"
-            data-modal="dictionaryModal"
-            onClick={() => dispatch(openModal('dictionaryModal'))}
-          >
-            <i className="fas fa-book mr-1.5 text-emerald-500"></i> Dictionary
-          </Button>
-          <Button
-            variant="pill"
-            size="sm"
-            data-modal="toolsModal"
-            onClick={() => dispatch(openModal('toolsModal'))}
-          >
-            <i className="fas fa-tools mr-1.5 text-purple-500"></i> Tools
-          </Button>
-        </div>
+        {activeWorkspace === 'desk' ? <CipherRunner /> : <LabWorkspace />}
       </main>
 
       {/* Modals */}
@@ -120,6 +86,7 @@ export function App() {
         isOpen={activeModal === 'toolsModal'}
         onClose={() => dispatch(closeModal())}
       />
+      <SessionSidebar />
 
       {/* Global Toast */}
       <Toast />
