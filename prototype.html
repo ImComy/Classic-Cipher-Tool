@@ -1,0 +1,3560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CryptoTool · Cipher Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eef4fb', 100: '#d4e2f5', 200: '#a9c5eb', 300: '#7ea8e0', 400: '#538bd6',
+                            500: '#2a4b7c', 600: '#1f3a62', 700: '#152a47', 800: '#0a192d', 900: '#050d16' },
+                        accent: { 50: '#fdf3ed', 100: '#fbe0d0', 200: '#f6c1a1', 300: '#f0b88a', 400: '#e8996a',
+                            500: '#d97747', 600: '#c55f2e', 700: '#a44922', 800: '#7d3819', 900: '#562510' }
+                    },
+                    fontFamily: { sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['Courier New', 'monospace'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ── existing styles ── */
+        .modal-overlay {
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .toast {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 12px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .chart-bars {
+            display: flex;
+            align-items: end;
+            gap: 0.2rem;
+            height: 160px;
+            padding-bottom: 0.3rem;
+            min-width: 400px;
+        }
+        .chart-bars .bar-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.1rem;
+            height: 100%;
+            justify-content: end;
+        }
+        .chart-bars .bar-wrap .bar {
+            width: 100%;
+            max-width: 24px;
+            min-height: 2px;
+            border-radius: 3px 3px 0 0;
+            transition: height 0.3s ease;
+        }
+        .chart-bars .bar-wrap .bar.text {
+            background: #2a4b7c;
+        }
+        .chart-bars .bar-wrap .bar.english {
+            background: #f0b88a;
+            opacity: 0.6;
+        }
+        .chart-bars .bar-wrap .bar-label {
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: #64748b;
+            text-align: center;
+        }
+        @media (max-width:640px) {
+            .chart-bars {
+                min-width: 280px;
+                height: 120px;
+            }
+        }
+        @media (max-width:480px) {
+            .chart-bars {
+                min-width: 200px;
+                height: 100px;
+            }
+        }
+
+        .matrix-wrapper {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+            padding: 0 0.75rem;
+        }
+        .matrix-wrapper::before {
+            content: '[';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+        }
+        .matrix-wrapper::after {
+            content: ']';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+        }
+        .matrix-grid {
+            display: grid;
+            gap: 0.35rem;
+            padding: 0.2rem 0;
+        }
+        .matrix-grid input {
+            width: 100%;
+            min-width: 32px;
+            text-align: center;
+            padding: 0.2rem 0.1rem;
+            font-size: 0.85rem;
+        }
+        .matrix-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-align: center;
+            grid-column: 1 / -1;
+            margin-top: 0.1rem;
+        }
+
+        .substitution-grid {
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            gap: 0.15rem;
+            max-width: 100%;
+        }
+        .substitution-grid .map-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.1rem;
+            font-size: 0.7rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 3px;
+            padding: 0.05rem 0.1rem;
+        }
+        .substitution-grid .map-cell .from-char {
+            color: #475569;
+            min-width: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+        .substitution-grid .map-cell .arrow {
+            color: #94a3b8;
+            font-size: 0.5rem;
+        }
+        .substitution-grid .map-cell .to-char {
+            min-width: 14px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            font-weight: 600;
+            color: #1e293b;
+            padding: 0;
+            margin: 0;
+            outline: none;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            width: 100%;
+        }
+        .substitution-grid .map-cell .to-char:focus {
+            background: #d4e2f5;
+            border-radius: 2px;
+        }
+        .substitution-grid .map-cell .to-char.number-mode {
+            color: #b45309;
+            font-weight: 700;
+        }
+        @media (max-width:640px) {
+            .substitution-grid {
+                grid-template-columns: repeat(13, 1fr);
+                gap: 0.1rem;
+            }
+            .substitution-grid .map-cell {
+                font-size: 0.6rem;
+                padding: 0.05rem 0.05rem;
+            }
+            .substitution-grid .map-cell .to-char {
+                font-size: 0.6rem;
+                min-width: 12px;
+            }
+            .substitution-grid .map-cell .from-char {
+                min-width: 10px;
+            }
+            .substitution-grid .map-cell .arrow {
+                font-size: 0.4rem;
+            }
+            .matrix-wrapper::before,
+            .matrix-wrapper::after {
+                font-size: 1.8rem;
+            }
+            .matrix-grid {
+                gap: 0.2rem;
+            }
+            .matrix-grid input {
+                min-width: 28px;
+                font-size: 0.75rem;
+                padding: 0.1rem 0.05rem;
+            }
+        }
+        @media (max-width:480px) {
+            .substitution-grid {
+                grid-template-columns: repeat(13, 1fr);
+                gap: 0.05rem;
+            }
+            .substitution-grid .map-cell {
+                font-size: 0.5rem;
+                padding: 0.02rem 0.02rem;
+                border-width: 0.5px;
+            }
+            .substitution-grid .map-cell .to-char {
+                font-size: 0.5rem;
+                min-width: 10px;
+            }
+            .substitution-grid .map-cell .from-char {
+                min-width: 8px;
+            }
+            .substitution-grid .map-cell .arrow {
+                display: none;
+            }
+            .matrix-wrapper::before,
+            .matrix-wrapper::after {
+                font-size: 1.4rem;
+            }
+            .matrix-grid input {
+                min-width: 22px;
+                font-size: 0.65rem;
+                padding: 0.05rem 0.02rem;
+            }
+        }
+
+        .dict-word {
+            padding: 0.4rem 0.8rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border-left: 3px solid #3a6a9f;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dict-word .word {
+            font-weight: 500;
+        }
+        .dict-word .freq {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .tip-card {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 0.6rem;
+            border-left: 3px solid #3a6a9f;
+        }
+        .tip-card .tip-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1e293b;
+        }
+        .tip-card .tip-title code {
+            background: #e2e8f0;
+            padding: 0.05rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #2a4b7c;
+        }
+        .tip-card .tip-body {
+            font-size: 0.85rem;
+            color: #475569;
+            margin-top: 0.2rem;
+            padding-left: 0.5rem;
+        }
+        .tip-card .tip-body .formula {
+            background: #e2e8f0;
+            padding: 0.15rem 0.6rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        .ic-bar-bg {
+            background: linear-gradient(to right, #f0b88a, #2a4b7c);
+        }
+
+        .inv-table-wrap {
+            overflow-x: auto;
+            font-size: 0.8rem;
+        }
+        .inv-table-wrap table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 480px;
+        }
+        .inv-table-wrap th,
+        .inv-table-wrap td {
+            border: 1px solid #d1d5db;
+            padding: 0.3rem 0.6rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+        }
+        .inv-table-wrap th {
+            background: #eef4fb;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .inv-table-wrap td.step-col {
+            background: #f8fafc;
+            font-weight: 500;
+        }
+        .inv-table-wrap tr.final-row td {
+            background: #d1fae5;
+            font-weight: 600;
+        }
+        .inv-table-wrap tr.final-row td.step-col {
+            background: #a7f3d0;
+        }
+        .inv-result-box {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            padding: 0.3rem 0.8rem;
+            font-weight: 600;
+            color: #065f46;
+        }
+        .inv-result-box .highlight {
+            background: #d1fae5;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+        }
+        .inv-no-inverse {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 6px;
+            padding: 0.3rem 0.8rem;
+            font-weight: 600;
+            color: #991b1b;
+        }
+
+        .hill-output-matrix {
+            display: inline-grid;
+            gap: 0.2rem;
+            padding: 0.5rem 1rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            margin: 0.25rem 0;
+        }
+        .hill-output-matrix .matrix-bracket {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 0.25rem;
+        }
+        .hill-output-matrix .matrix-cell {
+            padding: 0.1rem 0.6rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        .hill-output-matrix .matrix-row {
+            display: contents;
+        }
+        .hill-matrix-wrapper {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+            padding: 0 0.5rem;
+        }
+        .hill-matrix-wrapper::before {
+            content: '[';
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            margin-right: 0.2rem;
+        }
+        .hill-matrix-wrapper::after {
+            content: ']';
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            margin-left: 0.2rem;
+        }
+        .hill-matrix-inner {
+            display: grid;
+            gap: 0.3rem;
+            padding: 0.2rem 0;
+        }
+        .hill-matrix-inner input {
+            width: 100%;
+            min-width: 40px;
+            text-align: center;
+            padding: 0.2rem 0.1rem;
+            font-size: 0.85rem;
+        }
+        .hill-step-box {
+            background: #f1f5f9;
+            border-radius: 4px;
+            padding: 0.5rem 0.8rem;
+            margin-top: 0.3rem;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+            border-left: 3px solid #2a4b7c;
+        }
+        .hill-step-box .label {
+            font-weight: 600;
+            color: #1e293b;
+            margin-right: 0.5rem;
+        }
+        .hill-result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .key-badge {
+            display: inline-block;
+            background: #eef4fb;
+            color: #1e293b;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.1rem 0.5rem;
+            border-radius: 12px;
+            border: 1px solid #d4e2f5;
+            font-family: 'Courier New', monospace;
+        }
+        .key-badge .arrow {
+            color: #94a3b8;
+            margin: 0 0.2rem;
+        }
+
+        /* ── new step-modal styles ── */
+        .step-modal-content {
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .step-box {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #2a4b7c;
+            font-size: 0.9rem;
+        }
+        .step-box .step-label {
+            font-weight: 600;
+            color: #1e293b;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .step-box .step-detail {
+            font-family: 'Courier New', monospace;
+            color: #334155;
+            padding: 0.2rem 0.4rem;
+            background: white;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 0.1rem 0;
+        }
+        .step-box .step-formula {
+            background: #eef4fb;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            margin: 0.15rem 0;
+        }
+        .step-box .step-matrix {
+            display: inline-grid;
+            gap: 0.15rem;
+            padding: 0.3rem 0.6rem;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            margin: 0.2rem 0;
+        }
+        .step-box .step-matrix .cell {
+            padding: 0.1rem 0.5rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+        .step-box .step-matrix .row {
+            display: contents;
+        }
+        .step-box .step-matrix-wrap {
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+            padding: 0 0.4rem;
+        }
+        .step-box .step-matrix-wrap::before {
+            content: '[';
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            margin-right: 0.1rem;
+        }
+        .step-box .step-matrix-wrap::after {
+            content: ']';
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: #475569;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            margin-left: 0.1rem;
+        }
+        .step-box .step-table-wrap {
+            overflow-x: auto;
+            margin: 0.3rem 0;
+        }
+        .step-box .step-table-wrap table {
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            min-width: 300px;
+        }
+        .step-box .step-table-wrap th,
+        .step-box .step-table-wrap td {
+            border: 1px solid #d1d5db;
+            padding: 0.2rem 0.6rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        .step-box .step-table-wrap th {
+            background: #eef4fb;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .step-box .step-table-wrap tr.highlight-row td {
+            background: #d1fae5;
+            font-weight: 600;
+        }
+        .step-char-map {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.15rem;
+            margin: 0.2rem 0;
+        }
+        .step-char-map .char-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 3px;
+            padding: 0.1rem 0.4rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+        .step-char-map .char-item .arrow {
+            color: #94a3b8;
+            font-size: 0.6rem;
+        }
+        .step-char-map .char-item .highlight {
+            background: #d4e2f5;
+            border-radius: 2px;
+            padding: 0 0.2rem;
+        }
+        .step-char-map .char-item .idx {
+            color: #64748b;
+            font-size: 0.6rem;
+        }
+        .step-result {
+            background: #ecfdf5;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-weight: 600;
+            color: #065f46;
+            display: inline-block;
+            margin: 0.2rem 0;
+        }
+        .step-error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-weight: 600;
+            color: #991b1b;
+            display: inline-block;
+            margin: 0.2rem 0;
+        }
+        .step-subsection {
+            margin: 0.4rem 0 0.6rem 1rem;
+            padding-left: 0.8rem;
+            border-left: 2px dashed #d1d5db;
+        }
+        .step-subsection .sub-label {
+            font-weight: 500;
+            color: #475569;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width:640px) {
+            .step-modal-content {
+                max-width: 100%;
+                margin: 0.5rem;
+            }
+            .step-box {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            .step-char-map .char-item {
+                font-size: 0.7rem;
+                padding: 0.05rem 0.25rem;
+            }
+            .step-box .step-table-wrap table {
+                font-size: 0.65rem;
+                min-width: 200px;
+            }
+            .step-box .step-table-wrap th,
+            .step-box .step-table-wrap td {
+                padding: 0.1rem 0.3rem;
+            }
+        }
+        @media (max-width:480px) {
+            .step-box .step-matrix-wrap::before,
+            .step-box .step-matrix-wrap::after {
+                font-size: 1.2rem;
+            }
+            .step-box .step-matrix .cell {
+                font-size: 0.65rem;
+                padding: 0.05rem 0.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== HEADER ========== -->
+    <header class="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center gap-4 flex-wrap sticky top-0 z-40 shadow-sm">
+        <div class="flex items-center gap-2 font-bold text-base text-gray-900 mr-1">
+            <i class="fas fa-lock text-primary-500"></i>
+            CryptoTool
+            <small class="font-normal text-[0.65rem] text-gray-400 uppercase tracking-wide">v4</small>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap ml-auto">
+            <div class="flex items-center gap-1.5">
+                <select id="sessionSelect" class="w-auto min-w-[100px] md:min-w-[120px] px-2 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none">
+                    <option value="">— Sessions —</option>
+                </select>
+                <button class="px-2.5 py-1.5 rounded text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition flex items-center gap-1.5" id="sessionNewBtn" title="New Session">
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">New</span>
+                </button>
+                <button class="px-2.5 py-1.5 rounded text-sm font-medium bg-emerald-700 text-white hover:bg-emerald-800 transition flex items-center gap-1.5" id="sessionSaveBtn" title="Save Session">
+                    <i class="fas fa-save"></i> <span class="hidden sm:inline">Save</span>
+                </button>
+                <button class="px-2.5 py-1.5 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition flex items-center gap-1.5" id="sessionDeleteBtn" title="Delete Session">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button class="px-2.5 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition flex items-center gap-1.5" id="sessionExportBtn" title="Export Sessions">
+                    <i class="fas fa-file-export"></i> <span class="hidden sm:inline">Export</span>
+                </button>
+                <button class="px-2.5 py-1.5 rounded text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition flex items-center gap-1.5" id="sessionImportBtn" title="Import Sessions">
+                    <i class="fas fa-file-import"></i> <span class="hidden sm:inline">Import</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== MAIN ========== -->
+    <div class="max-w-6xl mx-auto px-3 md:px-6 py-4 md:py-6 flex flex-col gap-4">
+
+        <!-- WORKSPACE -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200 p-4 md:p-6">
+            <div class="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-3">
+                <i class="fas fa-terminal text-primary-400"></i>
+                Cipher Workspace
+                <span class="font-normal text-xs text-gray-400 ml-2">
+                    <span id="sessionNameDisplay">(untitled)</span>
+                </span>
+                <span class="font-normal text-xs text-gray-400 ml-2" id="sessionCommentDisplay"></span>
+            </div>
+
+            <!-- Cipher & controls -->
+            <div class="flex flex-wrap gap-3 items-end mb-3">
+                <div class="flex-1 min-w-[120px]">
+                    <label class="block text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Cipher</label>
+                    <select id="cipherSelect" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none">
+                        <option value="shift" selected>Shift (Caesar)</option>
+                        <option value="substitution">Substitution</option>
+                        <option value="affine">Affine</option>
+                        <option value="vigenere">Vigenère</option>
+                        <option value="hill">Hill</option>
+                        <option value="permutation">Permutation</option>
+                        <option value="autokey">Autokey</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[120px]">
+                    <label class="block text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Operation</label>
+                    <select id="opSelect" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none">
+                        <option value="encrypt">Encrypt</option>
+                        <option value="decrypt">Decrypt</option>
+                    </select>
+                </div>
+                <div class="flex-none flex gap-1.5">
+                    <label class="block text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">&nbsp;</label>
+                    <button class="px-4 py-1.5 rounded text-sm font-semibold bg-primary-500 text-white shadow-sm hover:bg-primary-600 hover:-translate-y-0.5 hover:shadow-md transition flex items-center gap-2" id="runBtn">
+                        <i class="fas fa-play"></i> Run
+                    </button>
+                    <button class="px-4 py-1.5 rounded text-sm font-semibold bg-amber-600 text-white shadow-sm hover:bg-amber-700 hover:-translate-y-0.5 hover:shadow-md transition flex items-center gap-2" id="stepsBtn">
+                        <i class="fas fa-list-ul"></i> Steps
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Key Input Area -->
+            <div class="bg-gray-50 rounded px-3 md:px-5 py-3 border border-gray-200 mb-3 flex flex-wrap gap-3 items-start transition" id="keyInputArea">
+                <!-- Rendered by JS -->
+            </div>
+
+            <!-- Action row -->
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button class="px-3 py-1.5 rounded text-sm font-medium bg-transparent border border-gray-300 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-50 transition flex items-center gap-2" id="swapBtn">
+                    <i class="fas fa-arrow-right-arrow-left"></i> Swap
+                </button>
+                <button class="px-3 py-1.5 rounded text-sm font-medium bg-transparent border border-gray-300 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-50 transition flex items-center gap-2" id="clearBtn">
+                    <i class="fas fa-eraser"></i> Clear
+                </button>
+                <button class="px-3 py-1.5 rounded text-sm font-medium bg-transparent border border-gray-300 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-50 transition flex items-center gap-2" id="commentBtn">
+                    <i class="fas fa-pen"></i> Comment
+                </button>
+                <span class="text-xs text-gray-400 ml-auto self-center hidden sm:inline"><i class="fas fa-info-circle mr-1"></i> Numbers in keys → letters (0=A, 1=B, …)</span>
+            </div>
+
+            <!-- Text Input / Output -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="text-sm font-semibold text-gray-500 block mb-0.5">Input <span class="font-normal text-xs text-gray-400">(type or paste)</span></label>
+                    <textarea id="inputText" class="w-full min-h-[160px] px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-800 font-mono focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none resize-y" placeholder="Enter text to encrypt or decrypt…">HELLO WORLD</textarea>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-500 block mb-0.5">Result <span class="font-normal text-xs text-gray-400">(output)</span></label>
+                    <div class="bg-gray-50 border border-gray-200 rounded p-3 min-h-[160px] max-h-[300px] overflow-y-auto font-mono text-sm whitespace-pre-wrap break-all text-gray-800" id="outputBox">
+                        <span class="text-gray-400 font-sans italic">Run an operation to see result</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="flex flex-wrap gap-3 md:gap-6 mt-3 pt-2 text-sm text-gray-500 border-t border-gray-100">
+                <span><i class="far fa-clock mr-1.5 text-gray-400"></i> Last run: <span id="lastRun" class="font-medium text-gray-700">—</span></span>
+                <span><i class="fas fa-key mr-1.5 text-gray-400"></i> Key: <span id="keyUsed" class="font-medium text-gray-700">—</span></span>
+                <span><i class="fas fa-info-circle mr-1.5 text-gray-400"></i> <span id="statusMsg" class="font-medium text-gray-700">Ready</span></span>
+            </div>
+
+            <!-- Feature Buttons -->
+            <div class="flex flex-wrap gap-1.5 mt-3">
+                <button class="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 transition border border-transparent flex items-center gap-1.5" data-modal="tipsModal">
+                    <i class="fas fa-lightbulb"></i> Tips
+                </button>
+                <button class="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 transition border border-transparent flex items-center gap-1.5" data-modal="analysisModal">
+                    <i class="fas fa-chart-bar"></i> Analysis
+                </button>
+                <button class="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 transition border border-transparent flex items-center gap-1.5" data-modal="dictionaryModal">
+                    <i class="fas fa-book"></i> Dictionary
+                </button>
+                <button class="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 transition border border-transparent flex items-center gap-1.5" data-modal="toolsModal">
+                    <i class="fas fa-tools"></i> Tools
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== STEPS MODAL ========== -->
+    <div class="modal-overlay hidden fixed inset-0 bg-black/40 backdrop-blur-sm justify-center items-center z-50 p-4" id="stepsModal">
+        <div class="bg-white rounded-md max-w-4xl w-full max-h-[90vh] flex flex-col shadow-lg overflow-hidden step-modal-content">
+            <div class="px-5 py-3 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-calculator text-primary-500"></i> Calculation Steps</h2>
+                <button class="close-btn text-2xl text-gray-400 px-2 py-0.5 rounded hover:bg-gray-100 hover:text-gray-700 transition leading-none" data-close="stepsModal">&times;</button>
+            </div>
+            <div class="px-5 py-4 overflow-y-auto flex-1" id="stepsContent">
+                <div class="text-gray-400 text-center py-8">Run an operation and click <strong>Steps</strong> to see the detailed calculation.</div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-200 flex justify-end shrink-0">
+                <button class="px-4 py-1.5 rounded text-sm font-semibold bg-gray-200 hover:bg-gray-300 transition" data-close="stepsModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== EXISTING MODALS (tips, analysis, dictionary, tools) ========== -->
+    <!-- TIPS MODAL -->
+    <div class="modal-overlay hidden fixed inset-0 bg-black/40 backdrop-blur-sm justify-center items-center z-50 p-4" id="tipsModal">
+        <div class="bg-white rounded-md max-w-3xl w-full max-h-[90vh] flex flex-col shadow-lg overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-lightbulb text-primary-500"></i> Tips &amp; Reference</h2>
+                <button class="close-btn text-2xl text-gray-400 px-2 py-0.5 rounded hover:bg-gray-100 hover:text-gray-700 transition leading-none" data-close="tipsModal">&times;</button>
+            </div>
+            <div class="px-5 py-4 overflow-y-auto flex-1">
+                <div class="mb-4">
+                    <h3 class="text-base font-semibold text-gray-800 mb-1.5 flex items-center gap-2"><i class="fas fa-sort-alpha-up text-primary-400"></i> Alphabet Index</h3>
+                    <div class="tip-card">
+                        <div class="tip-body" style="padding-left:0;">
+                            <div class="flex flex-wrap gap-1 text-sm">
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">A <code class="text-gray-500 ml-0.5">0</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">B <code class="text-gray-500 ml-0.5">1</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">C <code class="text-gray-500 ml-0.5">2</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">D <code class="text-gray-500 ml-0.5">3</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">E <code class="text-gray-500 ml-0.5">4</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">F <code class="text-gray-500 ml-0.5">5</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">G <code class="text-gray-500 ml-0.5">6</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">H <code class="text-gray-500 ml-0.5">7</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">I <code class="text-gray-500 ml-0.5">8</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">J <code class="text-gray-500 ml-0.5">9</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">K <code class="text-gray-500 ml-0.5">10</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">L <code class="text-gray-500 ml-0.5">11</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">M <code class="text-gray-500 ml-0.5">12</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">N <code class="text-gray-500 ml-0.5">13</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">O <code class="text-gray-500 ml-0.5">14</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">P <code class="text-gray-500 ml-0.5">15</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">Q <code class="text-gray-500 ml-0.5">16</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">R <code class="text-gray-500 ml-0.5">17</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">S <code class="text-gray-500 ml-0.5">18</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">T <code class="text-gray-500 ml-0.5">19</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">U <code class="text-gray-500 ml-0.5">20</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">V <code class="text-gray-500 ml-0.5">21</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">W <code class="text-gray-500 ml-0.5">22</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">X <code class="text-gray-500 ml-0.5">23</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">Y <code class="text-gray-500 ml-0.5">24</code></span>
+                                <span class="bg-gray-100 px-1.5 py-0.5 rounded font-medium">Z <code class="text-gray-500 ml-0.5">25</code></span>
+                            </div>
+                            <div class="text-gray-400 text-sm mt-1">A=0, B=1, …, Z=25 (mod 26 arithmetic). Numbers in keys → letters.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <h3 class="text-base font-semibold text-gray-800 mb-1.5 flex items-center gap-2"><i class="fas fa-code text-primary-400"></i> Cipher Reference</h3>
+                    <div class="tip-card"><div class="tip-title">Shift (Caesar) <code>E(x) = (x + k) mod 26</code></div><div class="tip-body">Shift each letter by a fixed number <strong>k</strong>. Decryption: <code>D(y) = (y - k) mod 26</code>.</div></div>
+                    <div class="tip-card"><div class="tip-title">Substitution <code>mapping: A→…, B→…</code></div><div class="tip-body">Replace each letter with another according to a fixed permutation. Frequency analysis helps.</div></div>
+                    <div class="tip-card"><div class="tip-title">Affine <code>E(x) = (a·x + b) mod 26</code></div><div class="tip-body">Requires <strong>gcd(a, 26) = 1</strong>. Decryption: <code>D(y) = a⁻¹·(y - b) mod 26</code>.</div></div>
+                    <div class="tip-card"><div class="tip-title">Vigenère <code>Cᵢ = (Pᵢ + Kᵢ) mod 26</code></div><div class="tip-body">Uses a repeating keyword. Decryption: <code>Pᵢ = (Cᵢ - Kᵢ) mod 26</code>.</div></div>
+                    <div class="tip-card"><div class="tip-title">Hill <code>n×n matrix</code></div><div class="tip-body">Encrypts blocks using matrix multiplication. Requires invertible matrix mod 26.</div></div>
+                    <div class="tip-card"><div class="tip-title">Permutation (Transposition) <code>reorder positions</code></div><div class="tip-body">Rearranges characters according to a fixed permutation.</div></div>
+                    <div class="tip-card"><div class="tip-title">Autokey <code>key extends with plaintext</code></div><div class="tip-body">Vigenère variant where the key is extended by the plaintext itself.</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANALYSIS MODAL -->
+    <div class="modal-overlay hidden fixed inset-0 bg-black/40 backdrop-blur-sm justify-center items-center z-50 p-4" id="analysisModal">
+        <div class="bg-white rounded-md max-w-3xl w-full max-h-[90vh] flex flex-col shadow-lg overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-chart-bar text-primary-500"></i> Frequency Analysis</h2>
+                <button class="close-btn text-2xl text-gray-400 px-2 py-0.5 rounded hover:bg-gray-100 hover:text-gray-700 transition leading-none" data-close="analysisModal">&times;</button>
+            </div>
+            <div class="px-5 py-4 overflow-y-auto flex-1">
+                <p class="text-gray-600 text-sm mb-2">Analyzes the text in the main input box. Click <strong>Analyze</strong> to update.</p>
+                <button class="px-4 py-1.5 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition flex items-center gap-2" id="analyzeBtn">
+                    <i class="fas fa-chart-simple"></i> Analyze
+                </button>
+                <div id="analysisStats" class="flex flex-wrap gap-1.5 md:gap-3 mt-2 text-sm">
+                    <span class="bg-gray-50 px-3 py-0.5 rounded-full border border-gray-200">Letters: <strong id="statTotal" class="text-gray-800">0</strong></span>
+                    <span class="bg-gray-50 px-3 py-0.5 rounded-full border border-gray-200">Unique: <strong id="statUnique" class="text-gray-800">0</strong></span>
+                    <span class="bg-gray-50 px-3 py-0.5 rounded-full border border-gray-200">Most common: <strong id="statMost" class="text-gray-800">—</strong></span>
+                </div>
+                <div class="mt-3 p-3 bg-gray-50 rounded border border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Index of Coincidence (IC)</span>
+                        <span id="icValue" class="text-sm font-bold text-gray-900">0.0000</span>
+                    </div>
+                    <div class="w-full bg-gray-300 rounded-full h-2.5 mt-1 overflow-hidden">
+                        <div id="icBar" class="ic-bar-bg h-2.5 rounded-full transition-all duration-300" style="width:0%;"></div>
+                    </div>
+                    <div class="flex justify-between text-[0.65rem] text-gray-400 mt-0.5">
+                        <span>Random ~0.038</span>
+                        <span>English ~0.066</span>
+                    </div>
+                </div>
+                <div class="bg-white rounded border border-gray-200 p-3 mt-2 overflow-x-auto">
+                    <div class="chart-bars" id="chartBars"></div>
+                    <div class="flex flex-wrap gap-3 justify-center text-sm text-gray-600 mt-2">
+                        <span><span class="inline-block w-3 h-3 rounded-sm bg-primary-500 align-middle mr-1.5"></span> Your text</span>
+                        <span><span class="inline-block w-3 h-3 rounded-sm bg-accent-300 align-middle mr-1.5 opacity-60"></span> English average</span>
+                    </div>
+                    <div class="text-gray-400 text-sm text-center mt-1" id="chartNote">Enter text and click Analyze.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DICTIONARY MODAL -->
+    <div class="modal-overlay hidden fixed inset-0 bg-black/40 backdrop-blur-sm justify-center items-center z-50 p-4" id="dictionaryModal">
+        <div class="bg-white rounded-md max-w-3xl w-full max-h-[90vh] flex flex-col shadow-lg overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-book text-primary-500"></i> Dictionary</h2>
+                <button class="close-btn text-2xl text-gray-400 px-2 py-0.5 rounded hover:bg-gray-100 hover:text-gray-700 transition leading-none" data-close="dictionaryModal">&times;</button>
+            </div>
+            <div class="px-5 py-4 overflow-y-auto flex-1">
+                <p class="text-gray-600 text-sm mb-2">Look up words to help with decryption.</p>
+                <div class="flex flex-wrap gap-2 mb-2">
+                    <input type="text" id="dictSearch" placeholder="Type a word…" class="flex-1 min-w-[120px] px-3 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none" />
+                    <button class="px-3 py-1.5 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition flex items-center gap-2" id="dictSearchBtn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button class="px-3 py-1.5 rounded text-sm font-medium bg-transparent border border-gray-300 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-50 transition flex items-center gap-2" id="dictClearBtn">
+                        <i class="fas fa-undo"></i> Clear
+                    </button>
+                </div>
+                <div class="max-h-[300px] overflow-y-auto mt-2" id="dictResults">
+                    <div class="text-gray-400 text-sm">Type a word and hit Search.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOOLS MODAL -->
+    <div class="modal-overlay hidden fixed inset-0 bg-black/40 backdrop-blur-sm justify-center items-center z-50 p-4" id="toolsModal">
+        <div class="bg-white rounded-md max-w-3xl w-full max-h-[90vh] flex flex-col shadow-lg overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-tools text-primary-500"></i> Tools</h2>
+                <button class="close-btn text-2xl text-gray-400 px-2 py-0.5 rounded hover:bg-gray-100 hover:text-gray-700 transition leading-none" data-close="toolsModal">&times;</button>
+            </div>
+            <div class="px-5 py-4 overflow-y-auto flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Modular Inverse -->
+                    <div class="bg-gray-50 rounded p-4 border border-gray-200 md:col-span-2">
+                        <div class="font-semibold text-gray-800 flex items-center gap-2 mb-1"><i class="fas fa-divide text-primary-400"></i> Modular Inverse — Extended Euclidean Table</div>
+                        <div class="text-sm text-gray-500 mb-2">Find <code>a⁻¹ mod 26</code> with step-by-step table</div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <input type="number" id="modInvInput" value="5" min="1" max="25" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded bg-white" />
+                            <span class="text-sm text-gray-600">mod 26</span>
+                            <button class="px-3 py-1 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition" id="modInvBtn">Compute</button>
+                            <button class="px-3 py-1 rounded text-sm font-medium bg-gray-200 hover:bg-gray-300 transition" id="modInvExampleBtn">Example 5</button>
+                            <button class="px-3 py-1 rounded text-sm font-medium bg-gray-200 hover:bg-gray-300 transition" id="modInvExample2Btn">Example 3</button>
+                        </div>
+                        <div id="modInvResult" class="bg-white border border-gray-200 rounded p-2 mt-1 min-h-[40px] overflow-x-auto">
+                            <span class="text-gray-400 font-sans italic">Enter a number and click Compute.</span>
+                        </div>
+                    </div>
+
+                    <!-- Hill Matrix Utilities -->
+                    <div class="bg-gray-50 rounded p-4 border border-gray-200 md:col-span-2">
+                        <div class="font-semibold text-gray-800 flex items-center gap-2 mb-1"><i class="fas fa-matrix text-primary-400"></i> Hill Matrix Utilities (mod 26)</div>
+                        <div class="text-sm text-gray-500 mb-2">Compute <code>det(K)</code>, <code>Adj(K)</code>, and <code>K⁻¹</code>.</div>
+                        <div class="w-full">
+                            <div class="flex items-center gap-3 flex-wrap mb-2">
+                                <label class="text-sm font-semibold text-gray-600">Matrix dimension (n×n):</label>
+                                <input type="number" id="hillToolMatrixSize" value="3" min="2" step="1" class="w-[60px] px-2 py-1 text-sm border border-gray-300 rounded bg-white" />
+                                <span class="text-sm text-gray-600">× <span id="hillToolMatrixSizeDisplay">3</span></span>
+                                <button id="hillMatrixRandomBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 mb-3">
+                                <button class="px-3 py-1 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition" id="hillMatrixDetBtn">Det(K)</button>
+                                <button class="px-3 py-1 rounded text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 transition" id="hillMatrixAdjBtn">Adj(K)</button>
+                                <button class="px-3 py-1 rounded text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition" id="hillMatrixInverseBtn">K⁻¹</button>
+                            </div>
+                            <div id="hillToolMatrixInputContainer" class="matrix-wrapper p-2 bg-white rounded border border-gray-300 inline-block">
+                                <div id="hillToolMatrixGrid" class="matrix-grid" style="grid-template-columns: repeat(3, 1fr);">
+                                    <input type="number" value="3" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="2" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="1" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="1" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="7" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="2" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="2" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="3" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                    <input type="number" value="5" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />
+                                </div>
+                            </div>
+                        </div>
+                        <div id="hillToolMatrixOutput" class="mt-3 bg-white border border-gray-200 rounded p-3 overflow-x-auto">
+                            <span class="text-gray-400 font-sans italic">Enter a matrix and click a button above.</span>
+                        </div>
+                    </div>
+
+                    <!-- GCD -->
+                    <div class="bg-gray-50 rounded p-4 border border-gray-200">
+                        <div class="font-semibold text-gray-800 flex items-center gap-2 mb-1"><i class="fas fa-sync text-primary-400"></i> GCD</div>
+                        <div class="text-sm text-gray-500 mb-2"><code>gcd(a, 26)</code> must be 1 for Affine</div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <input type="number" id="gcdInput" value="5" min="1" max="25" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded bg-white" />
+                            <button class="px-3 py-1 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition" id="gcdBtn">Compute</button>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded p-1.5 text-sm font-mono mt-1 min-h-[28px] overflow-y-auto" id="gcdResult"><span class="text-gray-400 font-sans italic">—</span></div>
+                    </div>
+
+                    <!-- Letter Replace -->
+                    <div class="bg-gray-50 rounded p-4 border border-gray-200">
+                        <div class="font-semibold text-gray-800 flex items-center gap-2 mb-1"><i class="fas fa-exchange-alt text-primary-400"></i> Letter Replace</div>
+                        <div class="text-sm text-gray-500 mb-2">Replace one letter with another</div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                            <input type="text" id="repText" placeholder="Text" value="HELLO" class="flex-1 min-w-[60px] px-2 py-1 text-sm border border-gray-300 rounded bg-white" />
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <input type="text" id="repFrom" placeholder="From" maxlength="1" class="w-12 px-1 py-1 text-sm border border-gray-300 rounded bg-white text-center" />
+                            <input type="text" id="repTo" placeholder="To" maxlength="1" class="w-12 px-1 py-1 text-sm border border-gray-300 rounded bg-white text-center" />
+                            <button class="px-3 py-1 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition" id="repBtn">Replace</button>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded p-1.5 text-sm font-mono mt-1 min-h-[28px] overflow-y-auto" id="repResult"><span class="text-gray-400 font-sans italic">—</span></div>
+                    </div>
+
+                    <!-- Affine Check -->
+                    <div class="bg-gray-50 rounded p-4 border border-gray-200">
+                        <div class="font-semibold text-gray-800 flex items-center gap-2 mb-1"><i class="fas fa-check-circle text-primary-400"></i> Affine Key Check</div>
+                        <div class="text-sm text-gray-500 mb-2">Validate <code>(a, b)</code> for Affine cipher</div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <input type="number" id="affineA" value="5" min="1" max="25" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded bg-white" placeholder="a" />
+                            <input type="number" id="affineB" value="3" min="0" max="25" class="w-16 px-2 py-1 text-sm border border-gray-300 rounded bg-white" placeholder="b" />
+                            <button class="px-3 py-1 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition" id="affineCheckBtn">Check</button>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded p-1.5 text-sm font-mono mt-1 min-h-[28px] overflow-y-auto" id="affineCheckResult"><span class="text-gray-400 font-sans italic">—</span></div>
+                    </div>
+
+                    <!-- Caesar Brute Force -->
+                    <div class="bg-gray-50 rounded p-4 border border-gray-200 md:col-span-2">
+                        <div class="font-semibold text-gray-800 flex items-center gap-2 mb-1"><i class="fas fa-list text-primary-400"></i> Caesar Brute Force</div>
+                        <div class="text-sm text-gray-500 mb-2">Show all 25 shifts of a Caesar cipher text</div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <input type="text" id="bruteText" placeholder="Cipher text…" value="KHOOR" class="flex-2 min-w-[100px] px-2 py-1 text-sm border border-gray-300 rounded bg-white" />
+                            <button class="px-3 py-1 rounded text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition" id="bruteBtn">Show All</button>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded p-1.5 text-sm font-mono mt-1 min-h-[28px] max-h-[150px] overflow-y-auto whitespace-pre-wrap" id="bruteResult"><span class="text-gray-400 font-sans italic">—</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TOAST ========== -->
+    <div class="toast fixed bottom-8 left-1/2 -translate-x-1/2 translate-y-5 bg-gray-900 text-white px-6 py-2.5 rounded-full text-sm font-medium shadow-lg opacity-0 pointer-events-none z-[999] max-w-[90%] text-center" id="toast"></div>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT                                                    -->
+    <!-- ============================================================ -->
+    <script>
+        // ============================================================
+        //  CONSTANTS & HELPERS
+        // ============================================================
+        const MOD = 26;
+        const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const ENGLISH_FREQ = { A: 8.17, B: 1.49, C: 2.78, D: 4.25, E: 12.70, F: 2.23, G: 2.02, H: 6.09, I: 6.97, J: 0.15,
+            K: 0.77, L: 4.03, M: 2.41, N: 6.75, O: 7.51, P: 1.93, Q: 0.10, R: 5.99, S: 6.33, T: 9.06, U: 2.76, V: 0.98,
+            W: 2.36, X: 0.15, Y: 1.97, Z: 0.07 };
+
+        function mod(n) { return ((n % MOD) + MOD) % MOD; }
+
+        function gcd(a, b) { a = Math.abs(a);
+            b = Math.abs(b); while (b) { let t = b;
+                b = a % b;
+                a = t; } return a; }
+
+        function modInv(a, m = MOD) { a = mod(a); for (let x = 1; x < m; x++) { if ((a * x) % m === 1) return x; } return -1; }
+
+        function modInvWithSteps(a, m = MOD) {
+            a = ((a % m) + m) % m;
+            if (a === 0) return { inverse: -1, steps: [] };
+            let r1 = m,
+                r2 = a,
+                t1 = 0,
+                t2 = 1;
+            const steps = [];
+            steps.push({ step: 0, q: null, r1: r1, r2: r2, r: null, t1: t1, t2: t2, t: null });
+            let i = 1;
+            while (r2 !== 0) {
+                const q = Math.floor(r1 / r2);
+                const r = r1 - q * r2;
+                const t = t1 - q * t2;
+                steps.push({ step: i, q: q, r1: r1, r2: r2, r: r, t1: t1, t2: t2, t: t });
+                r1 = r2;
+                r2 = r;
+                t1 = t2;
+                t2 = t;
+                i++;
+            }
+            steps.push({ step: i, q: null, r1: r1, r2: r2, r: null, t1: t1, t2: t2, t: null });
+            const inv = (t1 % m + m) % m;
+            return { inverse: inv, steps: steps };
+        }
+
+        function cleanText(t) { return t.toUpperCase().replace(/[^A-Z]/g, ''); }
+
+        function parseKeyWithNumbers(str) {
+            if (!str || typeof str !== 'string') return '';
+            const upper = str.toUpperCase();
+            if (/^[A-Z]+$/.test(upper)) return upper;
+            let result = '';
+            let i = 0;
+            const len = upper.length;
+            while (i < len) {
+                const ch = upper[i];
+                if (ch >= '0' && ch <= '9') {
+                    if (i + 1 < len && upper[i + 1] >= '0' && upper[i + 1] <= '9') {
+                        const twoDigit = parseInt(upper.substring(i, i + 2));
+                        if (twoDigit >= 0 && twoDigit <= 25) {
+                            result += String.fromCharCode(twoDigit + 65);
+                            i += 2;
+                            continue;
+                        }
+                    }
+                    const digit = parseInt(ch);
+                    if (digit >= 0 && digit <= 25) result += String.fromCharCode(digit + 65);
+                    i++;
+                } else if (ch >= 'A' && ch <= 'Z') { result += ch;
+                    i++; } else { i++; }
+            }
+            return result;
+        }
+
+        function cloneMatrix(m) { return m.map(row => [...row]); }
+
+        function getMinor(mat, row, col) {
+            return mat.filter((_, i) => i !== row).map(r => r.filter((_, j) => j !== col));
+        }
+
+        function detMatrix(mat) {
+            const n = mat.length;
+            if (n === 1) return mod(mat[0][0]);
+            if (n === 2) return mod(mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0]);
+            let det = 0;
+            for (let c = 0; c < n; c++) {
+                const minor = getMinor(mat, 0, c);
+                const sign = (c % 2 === 0) ? 1 : -1;
+                det += sign * mat[0][c] * detMatrix(minor);
+            }
+            return mod(det);
+        }
+
+        function cofactorMatrix(mat) {
+            const n = mat.length;
+            const cof = Array.from({ length: n }, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const minor = getMinor(mat, i, j);
+                    const sign = ((i + j) % 2 === 0) ? 1 : -1;
+                    cof[i][j] = mod(sign * detMatrix(minor));
+                }
+            }
+            return cof;
+        }
+
+        function adjugateMatrix(mat) {
+            const cof = cofactorMatrix(mat);
+            const n = mat.length;
+            const adj = Array.from({ length: n }, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    adj[i][j] = cof[j][i];
+                }
+            }
+            return adj;
+        }
+
+        function inverseMatrix(mat) {
+            const det = detMatrix(mat);
+            if (det === -1 || gcd(det, 26) !== 1) return null;
+            const invDet = modInv(det);
+            if (invDet === -1) return null;
+            const adj = adjugateMatrix(mat);
+            const n = mat.length;
+            const inv = Array.from({ length: n }, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    inv[i][j] = mod(adj[i][j] * invDet);
+                }
+            }
+            return inv;
+        }
+
+        // ============================================================
+        //  STEP-GENERATING CIPHER FUNCTIONS
+        //  Each returns { result, steps } where steps is an array of
+        //  step objects: { type, label, detail, table?, matrix?, etc. }
+        // ============================================================
+        function shiftCipherWithSteps(text, k, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            const shift = decrypt ? -k : k;
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` });
+            steps.push({ type: 'info', label: 'Key', detail: `Shift k = ${k} (${mode})` });
+            steps.push({ type: 'info', label: 'Formula', detail: `E(x) = (x + ${k}) mod 26` +
+                    (decrypt ? `  |  D(y) = (y - ${k}) mod 26` : '') });
+
+            const mappings = [];
+            let result = '';
+            for (const c of s) {
+                const idx = c.charCodeAt(0) - 65;
+                const newIdx = mod(idx + shift);
+                const newChar = String.fromCharCode(newIdx + 65);
+                mappings.push({
+                    char: c,
+                    idx: idx,
+                    newIdx: newIdx,
+                    newChar: newChar,
+                    formula: `${c}(${idx}) ${shift >= 0 ? '+' : ''}${shift} = ${newChar}(${newIdx})`
+                });
+                result += newChar;
+            }
+            steps.push({
+                type: 'mappings',
+                label: 'Character mapping',
+                mappings: mappings,
+                detail: mappings.map(m => m.formula).join('  |  ')
+            });
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        function substitutionCipherWithSteps(text, keyMap, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const parsed = parseKeyWithNumbers(keyMap);
+            const clean = parsed.toUpperCase().replace(/[^A-Z]/g, '');
+            if (clean.length !== 26 || new Set(clean).size !== 26) {
+                steps.push({ type: 'error', label: 'Error', detail: 'Key must be 26 unique letters.' });
+                return { result: 'ERROR: invalid key', steps };
+            }
+            const fwd = {},
+                rev = {};
+            for (let i = 0; i < 26; i++) { fwd[ALPHABET[i]] = clean[i];
+                rev[clean[i]] = ALPHABET[i]; }
+            const use = decrypt ? rev : fwd;
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` });
+            steps.push({ type: 'info', label: 'Key', detail: `Substitution mapping (${mode})` });
+            const mapDisplay = ALPHABET.split('').map((c, i) => `${c}→${clean[i]}`).join('  ');
+            steps.push({ type: 'info', label: 'Mapping', detail: mapDisplay });
+
+            const mappings = [];
+            let result = '';
+            for (const c of s) {
+                const mapped = use[c] || c;
+                mappings.push({ char: c, newChar: mapped, formula: `${c} → ${mapped}` });
+                result += mapped;
+            }
+            steps.push({ type: 'mappings', label: 'Character mapping', mappings: mappings,
+                detail: mappings.map(m => m.formula).join('  |  ') });
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        function affineCipherWithSteps(text, a, b, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            const g = gcd(a, 26);
+            if (g !== 1) {
+                steps.push({ type: 'error', label: 'Error', detail: `gcd(${a},26)=${g} ≠ 1 — key invalid.` });
+                return { result: 'ERROR: gcd(a,26) must be 1', steps };
+            }
+            const invA = modInv(a);
+            if (invA === -1) {
+                steps.push({ type: 'error', label: 'Error', detail: `No inverse for a=${a} mod 26.` });
+                return { result: 'ERROR: no inverse', steps };
+            }
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` });
+            steps.push({ type: 'info', label: 'Key', detail: `a=${a}, b=${b}  |  gcd(${a},26)=${g}  |  a⁻¹=${invA} (${mode})` });
+            const formula = decrypt ?
+                `D(y) = ${invA}·(y - ${b}) mod 26` :
+                `E(x) = ${a}·x + ${b} mod 26`;
+            steps.push({ type: 'info', label: 'Formula', detail: formula });
+
+            const mappings = [];
+            let result = '';
+            for (const c of s) {
+                const x = c.charCodeAt(0) - 65;
+                const y = decrypt ? mod(invA * (x - b)) : mod(a * x + b);
+                const newChar = String.fromCharCode(y + 65);
+                const formulaStr = decrypt ?
+                    `${c}(${x}) → ${invA}·(${x} - ${b}) = ${y} → ${newChar}` :
+                    `${c}(${x}) → ${a}·${x} + ${b} = ${y} → ${newChar}`;
+                mappings.push({ char: c, newChar: newChar, formula: formulaStr });
+                result += newChar;
+            }
+            steps.push({ type: 'mappings', label: 'Character mapping', mappings: mappings,
+                detail: mappings.map(m => m.formula).join('  |  ') });
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        function vigenereCipherWithSteps(text, key, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            const parsed = parseKeyWithNumbers(key);
+            const k = cleanText(parsed);
+            if (!k) {
+                steps.push({ type: 'error', label: 'Error', detail: 'Key cannot be empty.' });
+                return { result: 'ERROR: key required', steps };
+            }
+            const keyNums = k.split('').map(c => c.charCodeAt(0) - 65);
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` });
+            steps.push({ type: 'info', label: 'Key', detail: `"${key}" → parsed: "${k}" (${keyNums.join(',')}) (${mode})` });
+            const formula = decrypt ?
+                `Pᵢ = (Cᵢ - Kᵢ) mod 26` :
+                `Cᵢ = (Pᵢ + Kᵢ) mod 26`;
+            steps.push({ type: 'info', label: 'Formula', detail: formula });
+
+            const mappings = [];
+            let result = '';
+            for (let i = 0; i < s.length; i++) {
+                const c = s[i];
+                const x = c.charCodeAt(0) - 65;
+                const shift = keyNums[i % keyNums.length];
+                const y = decrypt ? mod(x - shift) : mod(x + shift);
+                const newChar = String.fromCharCode(y + 65);
+                const op = decrypt ? '-' : '+';
+                const ki = keyNums[i % keyNums.length];
+                const keyChar = k[i % k.length];
+                mappings.push({
+                    char: c,
+                    newChar: newChar,
+                    formula: `${c}(${x}) ${op} ${ki}(${keyChar}) = ${y} → ${newChar}`
+                });
+                result += newChar;
+            }
+            steps.push({ type: 'mappings', label: 'Character mapping', mappings: mappings,
+                detail: mappings.map(m => m.formula).join('  |  ') });
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        function hillCipherWithSteps(text, matrix, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            const n = matrix.length;
+            if (s.length % n !== 0) {
+                steps.push({ type: 'error', label: 'Error', detail: `Text length (${s.length}) must be multiple of ${n}.` });
+                return { result: `ERROR: text length must be multiple of ${n}`, steps };
+            }
+            const m = matrix.map(row => row.map(v => mod(v)));
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}" (length ${s.length})` });
+            steps.push({ type: 'info', label: 'Matrix', detail: `K = ${n}×${n} matrix (${mode})` });
+
+            // Show matrix
+            const matrixHtml = renderMatrixHTML(m);
+            steps.push({ type: 'html', label: 'Key Matrix', html: matrixHtml });
+
+            // Determinant
+            const det = detMatrix(m);
+            const g = gcd(det, 26);
+            steps.push({ type: 'info', label: 'Determinant', detail: `det(K) = ${det}  |  gcd(${det}, 26) = ${g}` });
+
+            let useMat;
+            if (decrypt) {
+                if (g !== 1) {
+                    steps.push({ type: 'error', label: 'Error', detail: `Matrix not invertible mod 26 (gcd≠1).` });
+                    return { result: 'ERROR: matrix not invertible mod 26', steps };
+                }
+                const invDet = modInv(det);
+                const inv = inverseMatrix(m);
+                if (!inv) {
+                    steps.push({ type: 'error', label: 'Error', detail: 'Failed to compute inverse.' });
+                    return { result: 'ERROR: no inverse', steps };
+                }
+                // Show modular inverse table for det
+                const invSteps = modInvWithSteps(det);
+                if (invSteps.inverse !== -1) {
+                    steps.push({ type: 'table', label: 'Extended Euclidean Algorithm: det(K)⁻¹ mod 26',
+                        tableData: invSteps.steps, extra: `det(K)⁻¹ = ${invSteps.inverse}` });
+                }
+                // Show adjugate
+                const adj = adjugateMatrix(m);
+                const adjHtml = renderMatrixHTML(adj);
+                steps.push({ type: 'html', label: 'Adjugate Matrix Adj(K) (cofactors transposed)', html: adjHtml });
+                // Show inverse
+                const invHtml = renderMatrixHTML(inv);
+                steps.push({ type: 'html', label: `Inverse Matrix K⁻¹ = det(K)⁻¹ · Adj(K) mod 26`,
+                    html: invHtml });
+                useMat = inv;
+            } else {
+                if (g !== 1) {
+                    steps.push({ type: 'warn', label: 'Warning', detail: `det(K) = ${det} not coprime to 26 — encryption will work but decryption won't.` });
+                }
+                useMat = m;
+            }
+
+            // Block-by-block multiplication
+            const blocks = [];
+            let result = '';
+            for (let i = 0; i < s.length; i += n) {
+                const block = s.slice(i, i + n).split('').map(c => c.charCodeAt(0) - 65);
+                const out = Array(n).fill(0);
+                const blockStr = block.join(',');
+                let calcLines = [];
+                for (let r = 0; r < n; r++) {
+                    let sum = 0;
+                    let terms = [];
+                    for (let c = 0; c < n; c++) {
+                        const val = useMat[r][c] * block[c];
+                        sum += val;
+                        terms.push(`${useMat[r][c]}·${block[c]}`);
+                    }
+                    const modSum = mod(sum);
+                    out[r] = modSum;
+                    calcLines.push(
+                        `row ${r+1}: ${terms.join(' + ')} = ${sum} ≡ ${modSum} mod 26 → ${String.fromCharCode(modSum+65)}`);
+                }
+                const outStr = out.map(v => String.fromCharCode(v + 65)).join('');
+                blocks.push({
+                    block: blockStr,
+                    chars: s.slice(i, i + n),
+                    outChars: outStr,
+                    calcLines: calcLines
+                });
+                result += outStr;
+            }
+
+            steps.push({
+                type: 'hill-blocks',
+                label: 'Block-by-block multiplication',
+                blocks: blocks,
+                detail: `Each ${n}-letter block multiplied by K${decrypt ? '⁻¹' : ''}`
+            });
+
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        function permutationCipherWithSteps(text, perm, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            const p = perm.split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+            if (p.length === 0) {
+                steps.push({ type: 'error', label: 'Error', detail: 'Invalid permutation.' });
+                return { result: 'ERROR: invalid permutation', steps };
+            }
+            const len = p.length;
+            const sorted = [...p].sort((a, b) => a - b);
+            if (sorted[sorted.length - 1] !== len || new Set(sorted).size !== len) {
+                steps.push({ type: 'error', label: 'Error', detail: 'Permutation must be 1..n unique.' });
+                return { result: 'ERROR: permutation must be 1..n', steps };
+            }
+            const pad = (len - (s.length % len)) % len;
+            const padded = s + 'X'.repeat(pad);
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` });
+            steps.push({ type: 'info', label: 'Key', detail: `Permutation: [${p.join(', ')}] (${mode})` });
+            steps.push({ type: 'info', label: 'Padding', detail: `Padded to length ${padded.length} (added ${pad} X's)` });
+
+            const order = decrypt ? p : p.map((_, i) => i + 1);
+            const blocks = [];
+            let result = '';
+            for (let i = 0; i < padded.length; i += len) {
+                const block = padded.slice(i, i + len).split('');
+                const out = new Array(len);
+                for (let j = 0; j < len; j++) {
+                    const pos = decrypt ? order[j] - 1 : order.indexOf(j + 1);
+                    out[j] = block[pos] || 'X';
+                }
+                const outStr = out.join('');
+                blocks.push({
+                    original: block.join(''),
+                    reordered: outStr,
+                    mapping: decrypt ?
+                        `positions ${order.join(',')} → ${outStr}` :
+                        `[${block.join(',')}] → [${outStr}]`
+                });
+                result += outStr;
+            }
+            steps.push({ type: 'perm-blocks', label: 'Block reordering', blocks: blocks });
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        function autokeyCipherWithSteps(text, key, decrypt) {
+            const s = cleanText(text);
+            const steps = [];
+            const mode = decrypt ? 'Decrypt' : 'Encrypt';
+            const parsed = parseKeyWithNumbers(key);
+            const k = cleanText(parsed);
+            if (!k) {
+                steps.push({ type: 'error', label: 'Error', detail: 'Key cannot be empty.' });
+                return { result: 'ERROR: key required', steps };
+            }
+            const keyNums = k.split('').map(c => c.charCodeAt(0) - 65);
+            const plainNums = s.split('').map(c => c.charCodeAt(0) - 65);
+            steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` });
+            steps.push({ type: 'info', label: 'Key', detail: `"${key}" → parsed: "${k}" (${keyNums.join(',')}) (${mode})` });
+            steps.push({ type: 'info', label: 'Mode', detail: `Autokey ${mode} — key extends with ${decrypt ? 'ciphertext' : 'plaintext'}` });
+
+            const mappings = [];
+            let result = '';
+            const fullKey = [...keyNums];
+            if (decrypt) {
+                for (let i = 0; i < plainNums.length; i++) {
+                    const shift = fullKey[i] !== undefined ? fullKey[i] : plainNums[i - keyNums.length];
+                    const p = mod(plainNums[i] - shift);
+                    const newChar = String.fromCharCode(p + 65);
+                    const keyChar = String.fromCharCode(shift + 65);
+                    mappings.push({
+                        char: s[i],
+                        newChar: newChar,
+                        formula: `${s[i]}(${plainNums[i]}) - ${shift}(${keyChar}) = ${p} → ${newChar}`
+                    });
+                    result += newChar;
+                    if (i >= keyNums.length) fullKey.push(p);
+                }
+            } else {
+                for (let i = 0; i < plainNums.length; i++) {
+                    const shift = fullKey[i] !== undefined ? fullKey[i] : plainNums[i - keyNums.length];
+                    const c = mod(plainNums[i] + shift);
+                    const newChar = String.fromCharCode(c + 65);
+                    const keyChar = String.fromCharCode(shift + 65);
+                    mappings.push({
+                        char: s[i],
+                        newChar: newChar,
+                        formula: `${s[i]}(${plainNums[i]}) + ${shift}(${keyChar}) = ${c} → ${newChar}`
+                    });
+                    result += newChar;
+                    if (i >= keyNums.length) fullKey.push(plainNums[i]);
+                }
+            }
+            steps.push({ type: 'mappings', label: 'Character mapping', mappings: mappings,
+                detail: mappings.map(m => m.formula).join('  |  ') });
+            steps.push({ type: 'result', label: 'Result', detail: result });
+            return { result, steps };
+        }
+
+        // ============================================================
+        //  RENDER HELPERS FOR STEPS
+        // ============================================================
+        function renderMatrixHTML(mat) {
+            const n = mat.length;
+            let html = '<div class="step-matrix-wrap"><div class="step-matrix" style="grid-template-columns: repeat(' + n +
+                ', auto); gap: 0.1rem;">';
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const val = mod(mat[r][c]);
+                    html += `<span class="cell">${val}</span>`;
+                }
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        function renderStep(step) {
+            const type = step.type || 'info';
+            let html = '<div class="step-box">';
+            if (step.label) html += `<span class="step-label">${step.label}</span>`;
+
+            switch (type) {
+                case 'info':
+                case 'warn':
+                    const icon = type === 'warn' ? '⚠️' : 'ℹ️';
+                    html += `<div>${icon} ${step.detail || ''}</div>`;
+                    break;
+                case 'error':
+                    html += `<div class="step-error">❌ ${step.detail || ''}</div>`;
+                    break;
+                case 'result':
+                    html += `<div class="step-result">✅ ${step.detail || ''}</div>`;
+                    break;
+                case 'mappings': {
+                    if (step.mappings && step.mappings.length > 0) {
+                        html += '<div class="step-char-map">';
+                        for (const m of step.mappings) {
+                            html +=
+                                `<span class="char-item"><span class="highlight">${m.char}</span><span class="arrow">→</span><span class="highlight">${m.newChar}</span> <span class="idx">(${m.formula})</span></span>`;
+                        }
+                        html += '</div>';
+                    } else {
+                        html += `<div>${step.detail || ''}</div>`;
+                    }
+                    break;
+                }
+                case 'table': {
+                    const data = step.tableData || [];
+                    if (data.length > 0) {
+                        html += '<div class="step-table-wrap"><table><thead><tr><th>Step</th><th>q</th><th>r₁</th><th>r₂</th><th>r</th><th>t₁</th><th>t₂</th><th>t</th></tr></thead><tbody>';
+                        for (const row of data) {
+                            const isFinal = (row.r2 === 0 && row.step > 0);
+                            const cls = isFinal ? 'highlight-row' : '';
+                            const qv = row.q !== null ? row.q : '—';
+                            const rv = row.r !== null ? row.r : '—';
+                            const tv = row.t !== null ? row.t : '—';
+                            html +=
+                                `<tr class="${cls}"><td>${row.step}</td><td>${qv}</td><td>${row.r1}</td><td>${row.r2}</td><td>${rv}</td><td>${row.t1}</td><td>${row.t2}</td><td>${tv}</td></tr>`;
+                        }
+                        html += '</tbody></table></div>';
+                        if (step.extra) html += `<div class="mt-1 text-sm text-gray-600">${step.extra}</div>`;
+                    }
+                    break;
+                }
+                case 'html': {
+                    html += step.html || '';
+                    break;
+                }
+                case 'hill-blocks': {
+                    const blocks = step.blocks || [];
+                    for (const b of blocks) {
+                        html += `<div class="step-subsection">`;
+                        html += `<div class="sub-label">Block: ${b.chars || b.block}</div>`;
+                        if (b.calcLines) {
+                            for (const line of b.calcLines) {
+                                html += `<div class="step-detail" style="display:block;margin:0.1rem 0;background:#f1f5f9;padding:0.15rem 0.5rem;border-radius:3px;">${line}</div>`;
+                            }
+                        }
+                        html += `<div class="step-detail" style="background:#ecfdf5;border:1px solid #86efac;">→ ${b.outChars || b.reordered}</div>`;
+                        html += `</div>`;
+                    }
+                    break;
+                }
+                case 'perm-blocks': {
+                    const blocks = step.blocks || [];
+                    for (const b of blocks) {
+                        html += `<div class="step-subsection">`;
+                        html += `<div class="sub-label">${b.original} → ${b.reordered}</div>`;
+                        html += `<div class="step-detail">${b.mapping || ''}</div>`;
+                        html += `</div>`;
+                    }
+                    break;
+                }
+                default:
+                    html += `<div>${step.detail || ''}</div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // ============================================================
+        //  RUN WITH STEPS
+        // ============================================================
+        function runCipherWithSteps() {
+            const cipher = document.getElementById('cipherSelect').value;
+            const op = document.getElementById('opSelect').value;
+            const text = document.getElementById('inputText').value;
+            const decrypt = op === 'decrypt';
+
+            let resultData = null;
+            let keyStr = '';
+
+            try {
+                switch (cipher) {
+                    case 'shift': {
+                        const k = parseInt(document.getElementById('keyShift')?.value) || 0;
+                        resultData = shiftCipherWithSteps(text, k, decrypt);
+                        keyStr = String(k);
+                        break;
+                    }
+                    case 'substitution': {
+                        let map = document.getElementById('keySub')?.value || '';
+                        if (!map) {
+                            const grid = document.getElementById('substitutionGrid');
+                            if (grid) {
+                                const inputs = grid.querySelectorAll('.to-char');
+                                map = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el.dataset.index)])
+                                    .join('');
+                            }
+                        }
+                        resultData = substitutionCipherWithSteps(text, map, decrypt);
+                        const parsed = parseKeyWithNumbers(map);
+                        keyStr = parsed.replace(/[^A-Z]/g, '') || map;
+                        break;
+                    }
+                    case 'affine': {
+                        const a = parseInt(document.getElementById('keyAffineA')?.value) || 5;
+                        const b = parseInt(document.getElementById('keyAffineB')?.value) || 3;
+                        resultData = affineCipherWithSteps(text, a, b, decrypt);
+                        keyStr = `${a}, ${b}`;
+                        break;
+                    }
+                    case 'vigenere': {
+                        const key = document.getElementById('keyVigenere')?.value || 'KEY';
+                        resultData = vigenereCipherWithSteps(text, key, decrypt);
+                        const parsed = parseKeyWithNumbers(key);
+                        keyStr = parsed.replace(/[^A-Z]/g, '') || key;
+                        break;
+                    }
+                    case 'hill': {
+                        const sizeInput = document.getElementById('hillSizeInput');
+                        const n = sizeInput ? parseInt(sizeInput.value) : 2;
+                        const matrix = [];
+                        for (let r = 0; r < n; r++) {
+                            const row = [];
+                            for (let c = 0; c < n; c++) {
+                                const el = document.getElementById(`hillCell_${r}_${c}`);
+                                row.push(el ? parseInt(el.value) || 0 : 0);
+                            }
+                            matrix.push(row);
+                        }
+                        resultData = hillCipherWithSteps(text, matrix, decrypt);
+                        keyStr = matrix.map(row => row.join(',')).join(';');
+                        break;
+                    }
+                    case 'permutation': {
+                        const perm = document.getElementById('keyPerm')?.value || '2,4,1,3';
+                        resultData = permutationCipherWithSteps(text, perm, decrypt);
+                        keyStr = perm;
+                        break;
+                    }
+                    case 'autokey': {
+                        const key = document.getElementById('keyAutokey')?.value || 'SECRET';
+                        resultData = autokeyCipherWithSteps(text, key, decrypt);
+                        const parsed = parseKeyWithNumbers(key);
+                        keyStr = parsed.replace(/[^A-Z]/g, '') || key;
+                        break;
+                    }
+                    default: {
+                        resultData = { result: 'ERROR: unknown cipher', steps: [{ type: 'error', label: 'Error',
+                                detail: 'Unknown cipher selected.' }] };
+                    }
+                }
+            } catch (e) {
+                resultData = { result: 'ERROR: ' + e.message, steps: [{ type: 'error', label: 'Exception',
+                        detail: e.message }] };
+            }
+
+            // Also run the normal cipher for the output box
+            const outputBox = document.getElementById('outputBox');
+            const result = resultData.result;
+            if (typeof result === 'string' && result.startsWith('ERROR')) {
+                outputBox.innerHTML = `<span class="text-gray-400 font-sans italic">${result}</span>`;
+                document.getElementById('statusMsg').textContent = 'Error';
+            } else {
+                outputBox.textContent = result || '(empty)';
+                document.getElementById('statusMsg').textContent = 'Done';
+            }
+            document.getElementById('lastRun').textContent = new Date().toLocaleTimeString();
+            document.getElementById('keyUsed').textContent = keyStr || '—';
+
+            // Render steps in the modal
+            renderStepsInModal(resultData, cipher, op);
+        }
+
+        function renderStepsInModal(data, cipher, op) {
+            const container = document.getElementById('stepsContent');
+            if (!data || !data.steps || data.steps.length === 0) {
+                container.innerHTML =
+                    `<div class="text-gray-400 text-center py-8">No steps available for this operation.</div>`;
+                return;
+            }
+
+            let html =
+                `<div class="mb-3 text-sm text-gray-500"><span class="font-semibold text-gray-700">${cipher.charAt(0).toUpperCase() + cipher.slice(1)}</span> · ${op.charAt(0).toUpperCase() + op.slice(1)}</div>`;
+
+            // Check if there's an error step
+            let hasError = false;
+            for (const step of data.steps) {
+                if (step.type === 'error') { hasError = true; break; }
+            }
+
+            for (const step of data.steps) {
+                html += renderStep(step);
+                if (step.type === 'error') break;
+            }
+
+            // If no error and we have a result, show it prominently
+            if (!hasError && data.result && !data.result.startsWith('ERROR')) {
+                html +=
+                    `<div class="step-box" style="border-left-color:#059669;"><span class="step-label">Final Output</span><div class="step-result" style="font-size:1.1rem;padding:0.4rem 1rem;">${data.result}</div></div>`;
+            }
+
+            container.innerHTML = html;
+            // Scroll to top of modal content
+            container.scrollTop = 0;
+        }
+
+        // ============================================================
+        //  EXISTING CIPHER FUNCTIONS (for normal run)
+        // ============================================================
+        function shiftCipher(text, k, decrypt) {
+            const s = cleanText(text);
+            const shift = decrypt ? -k : k;
+            return s.split('').map(c => String.fromCharCode(mod(c.charCodeAt(0) - 65 + shift) + 65)).join('');
+        }
+
+        function substitutionCipher(text, keyMap, decrypt) {
+            const s = cleanText(text);
+            const parsed = parseKeyWithNumbers(keyMap);
+            const clean = parsed.toUpperCase().replace(/[^A-Z]/g, '');
+            if (clean.length !== 26) return 'ERROR: key must be 26 unique letters';
+            const fwd = {},
+                rev = {};
+            for (let i = 0; i < 26; i++) { fwd[ALPHABET[i]] = clean[i];
+                rev[clean[i]] = ALPHABET[i]; }
+            const use = decrypt ? rev : fwd;
+            return s.split('').map(c => use[c] || c).join('');
+        }
+
+        function affineCipher(text, a, b, decrypt) {
+            const s = cleanText(text);
+            if (gcd(a, 26) !== 1) return 'ERROR: gcd(a,26) must be 1';
+            const inv = modInv(a);
+            if (inv === -1) return 'ERROR: no inverse';
+            return s.split('').map(c => {
+                const x = c.charCodeAt(0) - 65;
+                const y = decrypt ? mod(inv * (x - b)) : mod(a * x + b);
+                return String.fromCharCode(y + 65);
+            }).join('');
+        }
+
+        function vigenereCipher(text, key, decrypt) {
+            const s = cleanText(text);
+            const parsed = parseKeyWithNumbers(key);
+            const k = cleanText(parsed);
+            if (!k) return 'ERROR: key required';
+            const keyNums = k.split('').map(c => c.charCodeAt(0) - 65);
+            return s.split('').map((c, i) => {
+                const x = c.charCodeAt(0) - 65;
+                const shift = keyNums[i % keyNums.length];
+                return String.fromCharCode(mod(decrypt ? x - shift : x + shift) + 65);
+            }).join('');
+        }
+
+        function hillCipher(text, matrix, decrypt) {
+            const s = cleanText(text);
+            const n = matrix.length;
+            if (s.length % n !== 0) return `ERROR: text length must be multiple of ${n}`;
+            const m = matrix.map(row => row.map(v => mod(v)));
+            let useMat;
+            if (decrypt) {
+                const inv = inverseMatrix(m);
+                if (!inv) return 'ERROR: matrix not invertible mod 26';
+                useMat = inv;
+            } else {
+                useMat = m;
+            }
+            let result = '';
+            for (let i = 0; i < s.length; i += n) {
+                const block = s.slice(i, i + n).split('').map(c => c.charCodeAt(0) - 65);
+                const out = Array(n).fill(0);
+                for (let r = 0; r < n; r++) {
+                    let sum = 0;
+                    for (let c = 0; c < n; c++) sum += useMat[r][c] * block[c];
+                    out[r] = mod(sum);
+                }
+                result += out.map(v => String.fromCharCode(v + 65)).join('');
+            }
+            return result;
+        }
+
+        function permutationCipher(text, perm, decrypt) {
+            const s = cleanText(text);
+            const p = perm.split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+            if (p.length === 0) return 'ERROR: invalid permutation';
+            const len = p.length;
+            const sorted = [...p].sort((a, b) => a - b);
+            if (sorted[sorted.length - 1] !== len || new Set(sorted).size !== len)
+                return 'ERROR: permutation must be 1..n';
+            const pad = (len - (s.length % len)) % len;
+            const padded = s + 'X'.repeat(pad);
+            let result = '';
+            const order = decrypt ? p : p.map((_, i) => i + 1);
+            for (let i = 0; i < padded.length; i += len) {
+                const block = padded.slice(i, i + len).split('');
+                const out = new Array(len);
+                for (let j = 0; j < len; j++) {
+                    const pos = decrypt ? order[j] - 1 : order.indexOf(j + 1);
+                    out[j] = block[pos] || 'X';
+                }
+                result += out.join('');
+            }
+            return result;
+        }
+
+        function autokeyCipher(text, key, decrypt) {
+            const s = cleanText(text);
+            const parsed = parseKeyWithNumbers(key);
+            const k = cleanText(parsed);
+            if (!k) return 'ERROR: key required';
+            const keyNums = k.split('').map(c => c.charCodeAt(0) - 65);
+            const plainNums = s.split('').map(c => c.charCodeAt(0) - 65);
+            if (decrypt) {
+                let result = '';
+                const fullKey = [...keyNums];
+                for (let i = 0; i < plainNums.length; i++) {
+                    const shift = fullKey[i] !== undefined ? fullKey[i] : plainNums[i - keyNums.length];
+                    const p = mod(plainNums[i] - shift);
+                    result += String.fromCharCode(p + 65);
+                    if (i >= keyNums.length) fullKey.push(p);
+                }
+                return result;
+            } else {
+                let result = '';
+                const fullKey = [...keyNums];
+                for (let i = 0; i < plainNums.length; i++) {
+                    const shift = fullKey[i] !== undefined ? fullKey[i] : plainNums[i - keyNums.length];
+                    const c = mod(plainNums[i] + shift);
+                    result += String.fromCharCode(c + 65);
+                    if (i >= keyNums.length) fullKey.push(plainNums[i]);
+                }
+                return result;
+            }
+        }
+
+        // ============================================================
+        //  RUN CIPHER (normal, no steps)
+        // ============================================================
+        function runCipher() {
+            const cipher = document.getElementById('cipherSelect').value;
+            const op = document.getElementById('opSelect').value;
+            const text = document.getElementById('inputText').value;
+            const decrypt = op === 'decrypt';
+
+            let result = '';
+            let keyStr = '';
+
+            try {
+                switch (cipher) {
+                    case 'shift': {
+                        const k = parseInt(document.getElementById('keyShift')?.value) || 0;
+                        result = shiftCipher(text, k, decrypt);
+                        keyStr = String(k);
+                        break;
+                    }
+                    case 'substitution': {
+                        let map = document.getElementById('keySub')?.value || '';
+                        if (!map) {
+                            const grid = document.getElementById('substitutionGrid');
+                            if (grid) {
+                                const inputs = grid.querySelectorAll('.to-char');
+                                map = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el.dataset.index)])
+                                    .join('');
+                            }
+                        }
+                        const parsed = parseKeyWithNumbers(map);
+                        const cleaned = parsed.toUpperCase().replace(/[^A-Z]/g, '');
+                        if (cleaned.length !== 26 || new Set(cleaned).size !== 26) {
+                            result = 'ERROR: key must be 26 unique letters';
+                        } else {
+                            result = substitutionCipher(text, cleaned, decrypt);
+                            keyStr = cleaned;
+                        }
+                        break;
+                    }
+                    case 'affine': {
+                        const a = parseInt(document.getElementById('keyAffineA')?.value) || 5;
+                        const b = parseInt(document.getElementById('keyAffineB')?.value) || 3;
+                        result = affineCipher(text, a, b, decrypt);
+                        keyStr = `${a}, ${b}`;
+                        break;
+                    }
+                    case 'vigenere': {
+                        const key = document.getElementById('keyVigenere')?.value || 'KEY';
+                        result = vigenereCipher(text, key, decrypt);
+                        const parsed = parseKeyWithNumbers(key);
+                        keyStr = parsed.replace(/[^A-Z]/g, '') || key;
+                        break;
+                    }
+                    case 'hill': {
+                        const sizeInput = document.getElementById('hillSizeInput');
+                        const n = sizeInput ? parseInt(sizeInput.value) : 2;
+                        const matrix = [];
+                        for (let r = 0; r < n; r++) {
+                            const row = [];
+                            for (let c = 0; c < n; c++) {
+                                const el = document.getElementById(`hillCell_${r}_${c}`);
+                                row.push(el ? parseInt(el.value) || 0 : 0);
+                            }
+                            matrix.push(row);
+                        }
+                        result = hillCipher(text, matrix, decrypt);
+                        keyStr = matrix.map(row => row.join(',')).join(';');
+                        break;
+                    }
+                    case 'permutation': {
+                        const perm = document.getElementById('keyPerm')?.value || '2,4,1,3';
+                        result = permutationCipher(text, perm, decrypt);
+                        keyStr = perm;
+                        break;
+                    }
+                    case 'autokey': {
+                        const key = document.getElementById('keyAutokey')?.value || 'SECRET';
+                        result = autokeyCipher(text, key, decrypt);
+                        const parsed = parseKeyWithNumbers(key);
+                        keyStr = parsed.replace(/[^A-Z]/g, '') || key;
+                        break;
+                    }
+                    default:
+                        result = 'ERROR: unknown cipher';
+                }
+            } catch (e) {
+                result = 'ERROR: ' + e.message;
+            }
+
+            const outputBox = document.getElementById('outputBox');
+            if (typeof result === 'string' && result.startsWith('ERROR')) {
+                outputBox.innerHTML = `<span class="text-gray-400 font-sans italic">${result}</span>`;
+                document.getElementById('statusMsg').textContent = 'Error';
+            } else {
+                outputBox.textContent = result || '(empty)';
+                document.getElementById('statusMsg').textContent = 'Done';
+            }
+            document.getElementById('lastRun').textContent = new Date().toLocaleTimeString();
+            document.getElementById('keyUsed').textContent = keyStr || '—';
+        }
+
+        // ============================================================
+        //  SESSION DB (unchanged)
+        // ============================================================
+        const DB_NAME = 'CryptoToolDB';
+        const STORE_NAME = 'sessions';
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function dbLoadSessions() {
+            try {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(STORE_NAME, 'readonly');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.get('all_sessions');
+                    request.onsuccess = () => resolve(request.result ? request.result.data : []);
+                    request.onerror = () => resolve([]);
+                });
+            } catch { return []; }
+        }
+
+        async function dbSaveSessions(sessions) {
+            try {
+                const db = await openDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.put({ id: 'all_sessions', data: sessions });
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) { console.error('DB save error', e); }
+        }
+
+        // ============================================================
+        //  SESSIONS (unchanged)
+        // ============================================================
+        let sessions = [];
+        const ACTIVE_KEY = 'cryptotool_active';
+
+        function getActiveId() { return localStorage.getItem(ACTIVE_KEY) || null; }
+
+        function setActiveId(id) { if (id) localStorage.setItem(ACTIVE_KEY, id);
+            else localStorage.removeItem(ACTIVE_KEY); }
+
+        function getActiveSession() {
+            const id = getActiveId();
+            if (id) { const found = sessions.find(s => s.id === id); if (found) return found; }
+            if (sessions.length > 0) { setActiveId(sessions[0].id); return sessions[0]; }
+            return null;
+        }
+
+        function createSession(name) {
+            const id = 'session_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+            const newSession = {
+                id,
+                name: name || 'Untitled',
+                comment: '',
+                text: 'HELLO WORLD',
+                cipher: 'shift',
+                op: 'encrypt',
+                keyData: { k: 3 },
+                timestamp: Date.now()
+            };
+            sessions.unshift(newSession);
+            setActiveId(id);
+            return newSession;
+        }
+
+        async function saveCurrentSession() {
+            const id = getActiveId();
+            if (!id) { toast('No active session to save.'); return null; }
+            const idx = sessions.findIndex(s => s.id === id);
+            if (idx === -1) { toast('Session not found.'); return null; }
+            const data = captureState();
+            sessions[idx] = { ...sessions[idx], ...data, timestamp: Date.now() };
+            await dbSaveSessions(sessions);
+            renderSessionSelect();
+            return sessions[idx];
+        }
+
+        async function deleteActiveSession() {
+            const id = getActiveId();
+            if (!id) { toast('No active session.'); return; }
+            const idx = sessions.findIndex(s => s.id === id);
+            if (idx === -1) return;
+            sessions.splice(idx, 1);
+            if (sessions.length > 0) { setActiveId(sessions[0].id);
+                loadSession(sessions[0].id); } else { setActiveId(null);
+                const fresh = createSession('Untitled');
+                loadSession(fresh.id); }
+            await dbSaveSessions(sessions);
+            toast('Session deleted.');
+            renderSessionSelect();
+        }
+
+        function loadSession(id) {
+            const session = sessions.find(s => s.id === id);
+            if (!session) { toast('Session not found.'); return; }
+            setActiveId(id);
+            restoreState(session);
+            renderSessionSelect();
+            document.getElementById('sessionNameDisplay').textContent = session.name || 'untitled';
+            const commentDisplay = document.getElementById('sessionCommentDisplay');
+            if (session.comment) { commentDisplay.textContent = '✏️ ' + session.comment;
+                commentDisplay.classList.remove('hidden'); } else { commentDisplay.textContent = '';
+                commentDisplay.classList.add('hidden'); }
+            toast('Loaded: ' + (session.name || 'untitled'));
+        }
+
+        function captureState() {
+            const cipher = document.getElementById('cipherSelect').value;
+            const op = document.getElementById('opSelect').value;
+            const text = document.getElementById('inputText').value;
+            const keyData = getKeyDataFromUI(cipher);
+            return { cipher, op, text, keyData };
+        }
+
+        function restoreState(session) {
+            document.getElementById('cipherSelect').value = session.cipher || 'shift';
+            document.getElementById('opSelect').value = session.op || 'encrypt';
+            document.getElementById('inputText').value = session.text || '';
+            renderKeyInputs();
+            setKeyDataToUI(session.cipher || 'shift', session.keyData || {});
+            document.getElementById('outputBox').innerHTML =
+                '<span class="text-gray-400 font-sans italic">Run an operation to see result</span>';
+            document.getElementById('lastRun').textContent = '—';
+            document.getElementById('keyUsed').textContent = '—';
+            document.getElementById('sessionNameDisplay').textContent = session.name || 'untitled';
+            const commentDisplay = document.getElementById('sessionCommentDisplay');
+            if (session.comment) { commentDisplay.textContent = '✏️ ' + session.comment;
+                commentDisplay.classList.remove('hidden'); } else { commentDisplay.textContent = '';
+                commentDisplay.classList.add('hidden'); }
+            document.getElementById('statusMsg').textContent = 'Ready';
+        }
+
+        // ============================================================
+        //  KEY INPUT UI (unchanged)
+        // ============================================================
+        function renderKeyInputs() {
+            const container = document.getElementById('keyInputArea');
+            const cipher = document.getElementById('cipherSelect').value;
+            const currentKeyData = getKeyDataFromUI(cipher);
+
+            let html = '';
+            switch (cipher) {
+                case 'shift':
+                    html = `
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <label class="text-sm font-semibold text-gray-600">Shift (k):</label>
+                            <input type="number" id="keyShift" value="${currentKeyData.k || 3}" min="0" max="25" class="w-[70px] px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                            <span class="text-xs text-gray-500">(0–25)</span>
+                            <span id="shiftStatus" class="bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">✓</span> valid</span>
+                        </div>
+                        <div class="flex-1 min-w-[100px] flex items-center gap-2">
+                            <span class="font-normal text-xs text-gray-400">E(x) = (x + k) mod 26</span>
+                            <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                        </div>
+                    `;
+                    break;
+                case 'substitution': {
+                    const mapRaw = currentKeyData.map || 'QWERTYUIOPASDFGHJKLZXCVBNM';
+                    const mapParsed = parseKeyWithNumbers(mapRaw);
+                    const mapClean = mapParsed.toUpperCase().replace(/[^A-Z]/g, '');
+                    const padded = (mapClean + ALPHABET).slice(0, 26);
+                    const mapDisplay = mapRaw;
+                    html = `
+                        <div class="w-full">
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <label class="text-sm font-semibold text-gray-600">Substitution Key</label>
+                                <div class="flex items-center gap-2">
+                                    <span id="subStatus" class="bg-gray-200 text-gray-600 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">⏳</span> check</span>
+                                    <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                                    <button id="subToggleBtn" class="px-2 py-1 rounded text-xs font-medium bg-gray-200 hover:bg-gray-300 transition flex items-center gap-1">
+                                        <i class="fas fa-arrow-right-arrow-left"></i> <span id="toggleLabel">Switch to Text</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="substitutionGrid" class="substitution-grid mb-1">
+                                ${ALPHABET.split('').map((letter, idx) => {
+                                    const toChar = padded[idx] || letter;
+                                    return `<div class="map-cell">
+                                        <span class="from-char">${letter}</span>
+                                        <span class="arrow">→</span>
+                                        <input type="text" class="to-char" value="${toChar}" maxlength="1" data-index="${idx}" />
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                            <div id="subTextInput" class="hidden">
+                                <input type="text" id="keySub" value="${mapDisplay}" placeholder="26 unique letters or numbers (0-25)" class="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                                <div class="text-xs text-gray-400 mt-0.5">Numbers are converted to letters: 0→A, 8→I, 25→Z</div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                case 'affine':
+                    html = `
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <label class="text-sm font-semibold text-gray-600">a:</label>
+                            <input type="number" id="keyAffineA" value="${currentKeyData.a || 5}" min="1" max="25" class="w-[60px] px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                            <label class="text-sm font-semibold text-gray-600">b:</label>
+                            <input type="number" id="keyAffineB" value="${currentKeyData.b || 3}" min="0" max="25" class="w-[60px] px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                            <span id="affineStatus" class="bg-gray-200 text-gray-600 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">⏳</span> check</span>
+                            <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                        </div>
+                        <div class="flex-1 min-w-[100px]">
+                            <span class="font-normal text-xs text-gray-400">E(x) = (a·x + b) mod 26</span>
+                        </div>
+                    `;
+                    break;
+                case 'vigenere':
+                    html = `
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="text-sm font-semibold text-gray-600">Keyword:</label>
+                            <input type="text" id="keyVigenere" value="${currentKeyData.key || 'KEY'}" placeholder="KEY or 8 5 25" class="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                            <div class="text-xs text-gray-400 mt-0.5">Numbers → letters: <code>8 5 25</code> → <code>IFZ</code></div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="vigenereStatus" class="bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">✓</span> ready</span>
+                            <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                        </div>
+                        <div class="flex-1 min-w-[100px]">
+                            <span class="font-normal text-xs text-gray-400">Cᵢ = (Pᵢ + Kᵢ) mod 26</span>
+                        </div>
+                    `;
+                    break;
+                case 'hill': {
+                    const n = currentKeyData.n || 2;
+                    const matrix = currentKeyData.matrix || [
+                        [3, 2],
+                        [1, 4]
+                    ];
+                    html = `
+                        <div class="w-full">
+                            <div class="flex items-center gap-3 flex-wrap mb-2">
+                                <label class="text-sm font-semibold text-gray-600">Matrix dimension (n×n):</label>
+                                <input type="number" id="hillSizeInput" value="${n}" min="2" max="10" class="w-[60px] px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                                <span class="text-sm text-gray-600">× <span id="hillSizeDisplay">${n}</span></span>
+                                <span id="hillStatus" class="bg-gray-200 text-gray-600 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">⏳</span> check</span>
+                                <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                                <span class="text-xs text-gray-400 ml-2">(det must be coprime to 26)</span>
+                            </div>
+                            <div class="matrix-wrapper">
+                                <div class="matrix-grid" id="hillMatrixGrid" style="grid-template-columns: repeat(${n}, 1fr);">
+                                    ${Array.from({ length: n }, (_, r) =>
+                                        Array.from({ length: n }, (_, c) => {
+                                            const val = (matrix[r] && matrix[r][c] !== undefined) ? matrix[r][c] : 0;
+                                            return `<input type="number" id="hillCell_${r}_${c}" value="${val}" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white key-input" />`;
+                                        }).join('')
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                case 'permutation':
+                    html = `
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="text-sm font-semibold text-gray-600">Permutation (1..n):</label>
+                            <input type="text" id="keyPerm" value="${currentKeyData.perm || '2,4,1,3'}" placeholder="2,4,1,3" class="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="permStatus" class="bg-gray-200 text-gray-600 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">⏳</span> check</span>
+                            <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                        </div>
+                        <div class="flex-1 min-w-[100px]">
+                            <span class="font-normal text-xs text-gray-400">comma-separated, e.g. 2,4,1,3</span>
+                        </div>
+                    `;
+                    break;
+                case 'autokey':
+                    html = `
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="text-sm font-semibold text-gray-600">Keyword:</label>
+                            <input type="text" id="keyAutokey" value="${currentKeyData.key || 'SECRET'}" placeholder="SECRET or 8 5 25" class="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white key-input" />
+                            <div class="text-xs text-gray-400 mt-0.5">Numbers → letters: <code>8 5 25</code> → <code>IFZ</code></div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="autokeyStatus" class="bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium"><span class="status-icon">✓</span> ready</span>
+                            <button id="randomKeyBtn" class="px-2 py-1 rounded text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition flex items-center gap-1"><i class="fas fa-dice"></i> Random</button>
+                        </div>
+                        <div class="flex-1 min-w-[100px]">
+                            <span class="font-normal text-xs text-gray-400">key extends with plaintext</span>
+                        </div>
+                    `;
+                    break;
+                default:
+                    html = '<div><span class="text-gray-400">Select a cipher</span></div>';
+            }
+            container.innerHTML = html;
+
+            const rndBtn = container.querySelector('#randomKeyBtn');
+            if (rndBtn) rndBtn.addEventListener('click', generateRandomKey);
+
+            container.querySelectorAll('.key-input').forEach(el => {
+                el.addEventListener('input', () => { validateKeyInputs();
+                    debounceAutoSave(); });
+            });
+
+            const toggleBtn = container.querySelector('#subToggleBtn');
+            if (toggleBtn) {
+                const toggleLabel = document.getElementById('toggleLabel');
+                toggleBtn.addEventListener('click', () => {
+                    const visual = document.getElementById('substitutionGrid');
+                    const textInput = document.getElementById('subTextInput');
+                    if (visual.classList.contains('hidden')) {
+                        const textField = document.getElementById('keySub');
+                        if (textField) {
+                            const raw = textField.value;
+                            const parsed = parseKeyWithNumbers(raw);
+                            const clean = parsed.toUpperCase().replace(/[^A-Z]/g, '');
+                            const padded = (clean + ALPHABET).slice(0, 26);
+                            const inputs = visual.querySelectorAll('.to-char');
+                            inputs.forEach((inp, idx) => { inp.value = padded[idx] || ALPHABET[idx]; });
+                            textField.value = raw;
+                        }
+                        visual.classList.remove('hidden');
+                        textInput.classList.add('hidden');
+                        toggleLabel.textContent = 'Switch to Text';
+                    } else {
+                        const inputs = visual.querySelectorAll('.to-char');
+                        const key = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el.dataset.index)])
+                            .join('');
+                        const textField = document.getElementById('keySub');
+                        if (textField) textField.value = key;
+                        visual.classList.add('hidden');
+                        textInput.classList.remove('hidden');
+                        toggleLabel.textContent = 'Switch to Grid';
+                    }
+                    validateKeyInputs();
+                    debounceAutoSave();
+                });
+            }
+
+            const grid = document.getElementById('substitutionGrid');
+            if (grid) {
+                grid.querySelectorAll('.to-char').forEach(inp => {
+                    inp.addEventListener('input', (e) => {
+                        let val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (/^[0-9]$/.test(val)) {
+                            const num = parseInt(val);
+                            if (num >= 0 && num <= 9) val = String.fromCharCode(num + 65);
+                        }
+                        if (val.length > 1) val = val.slice(0, 1);
+                        e.target.value = val;
+                        const textField = document.getElementById('keySub');
+                        if (textField) {
+                            const inputs = grid.querySelectorAll('.to-char');
+                            const key = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el.dataset
+                            .index)]).join('');
+                            textField.value = key;
+                        }
+                        validateKeyInputs();
+                        debounceAutoSave();
+                    });
+                    inp.addEventListener('blur', () => {
+                        if (!inp.value) {
+                            const idx = parseInt(inp.dataset.index);
+                            inp.value = ALPHABET[idx];
+                            const textField = document.getElementById('keySub');
+                            if (textField) {
+                                const inputs = grid.querySelectorAll('.to-char');
+                                const key = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el
+                                .dataset.index)]).join('');
+                                textField.value = key;
+                            }
+                            validateKeyInputs();
+                            debounceAutoSave();
+                        }
+                    });
+                });
+            }
+
+            const sizeInput = container.querySelector('#hillSizeInput');
+            if (sizeInput) {
+                sizeInput.addEventListener('input', () => {
+                    let val = parseInt(sizeInput.value);
+                    if (isNaN(val) || val < 2) val = 2;
+                    sizeInput.value = val;
+                    document.getElementById('hillSizeDisplay').textContent = val;
+                    const grid = document.getElementById('hillMatrixGrid');
+                    const oldData = getKeyDataFromUI('hill');
+                    const oldMatrix = oldData.matrix || [
+                        [3, 2],
+                        [1, 4]
+                    ];
+                    let html2 = '';
+                    grid.style.gridTemplateColumns = `repeat(${val}, 1fr)`;
+                    for (let r = 0; r < val; r++) {
+                        for (let c = 0; c < val; c++) {
+                            const v = (oldMatrix[r] && oldMatrix[r][c] !== undefined) ? oldMatrix[r][c] : 0;
+                            html2 +=
+                                `<input type="number" id="hillCell_${r}_${c}" value="${v}" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white key-input" />`;
+                        }
+                    }
+                    grid.innerHTML = html2;
+                    grid.querySelectorAll('.key-input').forEach(el => {
+                        el.addEventListener('input', () => { validateKeyInputs();
+                            debounceAutoSave(); });
+                    });
+                    validateKeyInputs();
+                    debounceAutoSave();
+                });
+            }
+
+            const viKey = document.getElementById('keyVigenere');
+            if (viKey) {
+                viKey.addEventListener('input', () => {
+                    const parsed = parseKeyWithNumbers(viKey.value);
+                    const status = document.getElementById('vigenereStatus');
+                    if (status) {
+                        const clean = parsed.replace(/[^A-Z]/g, '');
+                        if (clean.length > 0) {
+                            status.innerHTML =
+                                `<span class="status-icon">✓</span> → <span class="font-mono text-xs">${clean}</span>`;
+                            status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        } else {
+                            status.innerHTML = '<span class="status-icon">✗</span> empty';
+                            status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        }
+                    }
+                });
+                viKey.dispatchEvent(new Event('input'));
+            }
+
+            const akKey = document.getElementById('keyAutokey');
+            if (akKey) {
+                akKey.addEventListener('input', () => {
+                    const parsed = parseKeyWithNumbers(akKey.value);
+                    const status = document.getElementById('autokeyStatus');
+                    if (status) {
+                        const clean = parsed.replace(/[^A-Z]/g, '');
+                        if (clean.length > 0) {
+                            status.innerHTML =
+                                `<span class="status-icon">✓</span> → <span class="font-mono text-xs">${clean}</span>`;
+                            status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        } else {
+                            status.innerHTML = '<span class="status-icon">✗</span> empty';
+                            status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        }
+                    }
+                });
+                akKey.dispatchEvent(new Event('input'));
+            }
+
+            const subText = document.getElementById('keySub');
+            if (subText) {
+                subText.addEventListener('input', () => {
+                    const parsed = parseKeyWithNumbers(subText.value);
+                    const clean = parsed.replace(/[^A-Z]/g, '');
+                    const status = document.getElementById('subStatus');
+                    if (status) {
+                        if (clean.length === 26 && new Set(clean).size === 26) {
+                            status.innerHTML =
+                                `<span class="status-icon">✓</span> valid (${clean.substring(0, 8)}…)`;
+                            status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        } else {
+                            status.innerHTML =
+                                `<span class="status-icon">⏳</span> ${clean.length}/26 unique ${new Set(clean).size}/26`;
+                            status.className = 'bg-gray-200 text-gray-600 rounded-full px-2 py-0.5 text-xs font-medium';
+                        }
+                    }
+                });
+                subText.dispatchEvent(new Event('input'));
+            }
+
+            setTimeout(() => validateKeyInputs(), 50);
+        }
+
+        function getKeyDataFromUI(cipher) {
+            const data = {};
+            switch (cipher) {
+                case 'shift':
+                    data.k = parseInt(document.getElementById('keyShift')?.value) || 3;
+                    break;
+                case 'substitution': {
+                    const hidden = document.getElementById('keySub');
+                    if (hidden && !hidden.closest('.hidden')) {
+                        const raw = hidden.value;
+                        data.map = parseKeyWithNumbers(raw);
+                    } else {
+                        const grid = document.getElementById('substitutionGrid');
+                        if (grid) {
+                            const inputs = grid.querySelectorAll('.to-char');
+                            data.map = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el.dataset.index)])
+                                .join('');
+                        } else data.map = 'QWERTYUIOPASDFGHJKLZXCVBNM';
+                    }
+                    break;
+                }
+                case 'affine':
+                    data.a = parseInt(document.getElementById('keyAffineA')?.value) || 5;
+                    data.b = parseInt(document.getElementById('keyAffineB')?.value) || 3;
+                    break;
+                case 'vigenere':
+                    data.key = document.getElementById('keyVigenere')?.value || 'KEY';
+                    break;
+                case 'hill': {
+                    const sizeInput = document.getElementById('hillSizeInput');
+                    const n = sizeInput ? parseInt(sizeInput.value) : 2;
+                    const matrix = [];
+                    for (let r = 0; r < n; r++) {
+                        const row = [];
+                        for (let c = 0; c < n; c++) {
+                            const el = document.getElementById(`hillCell_${r}_${c}`);
+                            row.push(el ? parseInt(el.value) || 0 : 0);
+                        }
+                        matrix.push(row);
+                    }
+                    data.n = n;
+                    data.matrix = matrix;
+                    break;
+                }
+                case 'permutation':
+                    data.perm = document.getElementById('keyPerm')?.value || '2,4,1,3';
+                    break;
+                case 'autokey':
+                    data.key = document.getElementById('keyAutokey')?.value || 'SECRET';
+                    break;
+            }
+            return data;
+        }
+
+        function setKeyDataToUI(cipher, data) {
+            switch (cipher) {
+                case 'shift': { const el = document.getElementById('keyShift'); if (el) el.value = data.k ?? 3; break; }
+                case 'substitution': {
+                    const raw = data.map || 'QWERTYUIOPASDFGHJKLZXCVBNM';
+                    const parsed = parseKeyWithNumbers(raw);
+                    const clean = parsed.toUpperCase().replace(/[^A-Z]/g, '');
+                    const padded = (clean + ALPHABET).slice(0, 26);
+                    const hidden = document.getElementById('keySub');
+                    if (hidden) hidden.value = raw;
+                    const grid = document.getElementById('substitutionGrid');
+                    if (grid) {
+                        const inputs = grid.querySelectorAll('.to-char');
+                        inputs.forEach((inp, idx) => { inp.value = padded[idx] || ALPHABET[idx]; });
+                    }
+                    break;
+                }
+                case 'affine': {
+                    const a = document.getElementById('keyAffineA');
+                    const b = document.getElementById('keyAffineB');
+                    if (a) a.value = data.a ?? 5;
+                    if (b) b.value = data.b ?? 3;
+                    break;
+                }
+                case 'vigenere': { const vk = document.getElementById('keyVigenere'); if (vk) vk.value = data.key || 'KEY'; break; }
+                case 'hill': {
+                    const sizeInput = document.getElementById('hillSizeInput');
+                    const matrix = data.matrix || [
+                        [3, 2],
+                        [1, 4]
+                    ];
+                    const n = data.n || matrix.length || 2;
+                    if (sizeInput) { sizeInput.value = n;
+                        document.getElementById('hillSizeDisplay').textContent = n; }
+                    const grid = document.getElementById('hillMatrixGrid');
+                    if (grid) {
+                        let html = '';
+                        grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+                        for (let r = 0; r < n; r++) {
+                            for (let c = 0; c < n; c++) {
+                                const val = (matrix[r] && matrix[r][c] !== undefined) ? matrix[r][c] : 0;
+                                html +=
+                                    `<input type="number" id="hillCell_${r}_${c}" value="${val}" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white key-input" />`;
+                            }
+                        }
+                        grid.innerHTML = html;
+                        grid.querySelectorAll('.key-input').forEach(el => {
+                            el.addEventListener('input', () => { validateKeyInputs();
+                                debounceAutoSave(); });
+                        });
+                    }
+                    break;
+                }
+                case 'permutation': { const p = document.getElementById('keyPerm'); if (p) p.value = data.perm ||
+                        '2,4,1,3'; break; }
+                case 'autokey': { const ak = document.getElementById('keyAutokey'); if (ak) ak.value = data.key ||
+                        'SECRET'; break; }
+            }
+        }
+
+        function validateKeyInputs() {
+            const cipher = document.getElementById('cipherSelect').value;
+            switch (cipher) {
+                case 'shift': {
+                    const el = document.getElementById('keyShift');
+                    const status = document.getElementById('shiftStatus');
+                    if (!el || !status) return;
+                    const val = parseInt(el.value);
+                    if (isNaN(val) || val < 0 || val > 25) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✗</span> must be 0–25';
+                    } else {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✓</span> valid';
+                    }
+                    break;
+                }
+                case 'substitution': {
+                    const status = document.getElementById('subStatus');
+                    if (!status) return;
+                    let val = '';
+                    const hidden = document.getElementById('keySub');
+                    if (hidden && !hidden.closest('.hidden')) {
+                        const raw = hidden.value;
+                        val = parseKeyWithNumbers(raw);
+                    } else {
+                        const grid = document.getElementById('substitutionGrid');
+                        if (grid) {
+                            const inputs = grid.querySelectorAll('.to-char');
+                            val = Array.from(inputs).map(el => el.value || ALPHABET[parseInt(el.dataset.index)]).join(
+                            '');
+                        }
+                    }
+                    const clean = val.toUpperCase().replace(/[^A-Z]/g, '');
+                    const unique = new Set(clean).size;
+                    if (clean.length !== 26 || unique !== 26) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✗</span> ${clean.length}/26 unique ${unique}/26`;
+                    } else {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✓</span> valid permutation`;
+                    }
+                    break;
+                }
+                case 'affine': {
+                    const aEl = document.getElementById('keyAffineA');
+                    const bEl = document.getElementById('keyAffineB');
+                    const status = document.getElementById('affineStatus');
+                    if (!aEl || !bEl || !status) return;
+                    const a = parseInt(aEl.value);
+                    const b = parseInt(bEl.value);
+                    if (isNaN(a) || isNaN(b) || a < 1 || a > 25 || b < 0 || b > 25) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✗</span> a:1–25, b:0–25';
+                    } else if (gcd(a, 26) !== 1) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✗</span> gcd(${a},26)=${gcd(a, 26)} ≠ 1`;
+                    } else {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✓</span> gcd=1, a⁻¹=${modInv(a)}`;
+                    }
+                    break;
+                }
+                case 'vigenere': {
+                    const el = document.getElementById('keyVigenere');
+                    const status = document.getElementById('vigenereStatus');
+                    if (!el || !status) return;
+                    const raw = el.value.trim();
+                    const parsed = parseKeyWithNumbers(raw);
+                    const clean = parsed.replace(/[^A-Z]/g, '');
+                    if (!clean) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✗</span> enter a keyword';
+                    } else {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        const display = clean.length > 12 ? clean.substring(0, 10) + '…' : clean;
+                        status.innerHTML =
+                        `<span class="status-icon">✓</span> → <span class="font-mono text-xs">${display}</span>`;
+                    }
+                    break;
+                }
+                case 'hill': {
+                    const sizeInput = document.getElementById('hillSizeInput');
+                    const status = document.getElementById('hillStatus');
+                    if (!sizeInput || !status) return;
+                    let n = parseInt(sizeInput.value);
+                    if (isNaN(n) || n < 2) n = 2;
+                    sizeInput.value = n;
+                    document.getElementById('hillSizeDisplay').textContent = n;
+                    const matrix = [];
+                    for (let r = 0; r < n; r++) {
+                        const row = [];
+                        for (let c = 0; c < n; c++) {
+                            const el = document.getElementById(`hillCell_${r}_${c}`);
+                            row.push(el ? parseInt(el.value) || 0 : 0);
+                        }
+                        matrix.push(row);
+                    }
+                    const det = detMatrix(matrix);
+                    if (det === -1 || gcd(det, 26) !== 1) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✗</span> det=${det} not coprime to 26`;
+                    } else {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✓</span> det=${det}, invertible`;
+                    }
+                    break;
+                }
+                case 'permutation': {
+                    const el = document.getElementById('keyPerm');
+                    const status = document.getElementById('permStatus');
+                    if (!el || !status) return;
+                    const parts = el.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    if (parts.length === 0) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✗</span> enter numbers';
+                        return;
+                    }
+                    const sorted = [...parts].sort((a, b) => a - b);
+                    const n = parts.length;
+                    const valid = sorted.every((v, i) => v === i + 1) && new Set(parts).size === n;
+                    if (valid) {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = `<span class="status-icon">✓</span> valid permutation (${n})`;
+                    } else {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✗</span> must be 1..n unique';
+                    }
+                    break;
+                }
+                case 'autokey': {
+                    const el = document.getElementById('keyAutokey');
+                    const status = document.getElementById('autokeyStatus');
+                    if (!el || !status) return;
+                    const raw = el.value.trim();
+                    const parsed = parseKeyWithNumbers(raw);
+                    const clean = parsed.replace(/[^A-Z]/g, '');
+                    if (!clean) {
+                        status.className = 'bg-red-100 text-red-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        status.innerHTML = '<span class="status-icon">✗</span> enter a keyword';
+                    } else {
+                        status.className = 'bg-green-100 text-green-800 rounded-full px-2 py-0.5 text-xs font-medium';
+                        const display = clean.length > 12 ? clean.substring(0, 10) + '…' : clean;
+                        status.innerHTML =
+                        `<span class="status-icon">✓</span> → <span class="font-mono text-xs">${display}</span>`;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // ============================================================
+        //  RANDOM KEY (unchanged)
+        // ============================================================
+        function shuffleArray(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i +
+                1));
+                [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
+        function generateRandomKey() {
+            const cipher = document.getElementById('cipherSelect').value;
+            switch (cipher) {
+                case 'shift': { const k = Math.floor(Math.random() * 25) + 1; const el = document.getElementById(
+                        'keyShift'); if (el) el.value = k; break; }
+                case 'substitution': {
+                    const arr = ALPHABET.split('');
+                    shuffleArray(arr);
+                    const key = arr.join('');
+                    const hidden = document.getElementById('keySub');
+                    if (hidden) hidden.value = key;
+                    const grid = document.getElementById('substitutionGrid');
+                    if (grid) {
+                        const inputs = grid.querySelectorAll('.to-char');
+                        inputs.forEach((inp, idx) => { inp.value = key[idx] || ALPHABET[idx]; });
+                    }
+                    break;
+                }
+                case 'affine': {
+                    const coprimes = [1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25];
+                    const a = coprimes[Math.floor(Math.random() * coprimes.length)];
+                    const b = Math.floor(Math.random() * 26);
+                    const aEl = document.getElementById('keyAffineA');
+                    const bEl = document.getElementById('keyAffineB');
+                    if (aEl) aEl.value = a;
+                    if (bEl) bEl.value = b;
+                    break;
+                }
+                case 'vigenere': {
+                    const len = 6 + Math.floor(Math.random() * 5);
+                    let str = '';
+                    for (let i = 0; i < len; i++) str += ALPHABET[Math.floor(Math.random() * 26)];
+                    const el = document.getElementById('keyVigenere');
+                    if (el) el.value = str;
+                    break;
+                }
+                case 'hill': {
+                    const sizeInput = document.getElementById('hillSizeInput');
+                    const n = sizeInput ? parseInt(sizeInput.value) : 2;
+                    let matrix, det;
+                    let attempts = 0;
+                    do {
+                        matrix = Array.from({ length: n }, () => Array.from({ length: n }, () => Math.floor(Math
+                        .random() * 26)));
+                        det = detMatrix(matrix);
+                        attempts++;
+                    } while ((det === -1 || gcd(det, 26) !== 1) && attempts < 200);
+                    if (det !== -1 && gcd(det, 26) === 1) {
+                        const grid = document.getElementById('hillMatrixGrid');
+                        if (grid) {
+                            for (let r = 0; r < n; r++) {
+                                for (let c = 0; c < n; c++) {
+                                    const el = document.getElementById(`hillCell_${r}_${c}`);
+                                    if (el) el.value = matrix[r][c];
+                                }
+                            }
+                        }
+                    } else { toast('Failed to generate invertible matrix, try again.'); }
+                    break;
+                }
+                case 'permutation': {
+                    const n = 4 + Math.floor(Math.random() * 2);
+                    const arr = Array.from({ length: n }, (_, i) => i + 1);
+                    shuffleArray(arr);
+                    const el = document.getElementById('keyPerm');
+                    if (el) el.value = arr.join(',');
+                    break;
+                }
+                case 'autokey': {
+                    const len = 6 + Math.floor(Math.random() * 5);
+                    let str = '';
+                    for (let i = 0; i < len; i++) str += ALPHABET[Math.floor(Math.random() * 26)];
+                    const el = document.getElementById('keyAutokey');
+                    if (el) el.value = str;
+                    break;
+                }
+            }
+            validateKeyInputs();
+            debounceAutoSave();
+            toast('Random key generated.');
+        }
+
+        // ============================================================
+        //  SESSION SELECT RENDER
+        // ============================================================
+        function renderSessionSelect() {
+            const select = document.getElementById('sessionSelect');
+            const activeId = getActiveId();
+            let html = '<option value="">— Sessions —</option>';
+            sessions.forEach(s => {
+                const active = s.id === activeId ? ' selected' : '';
+                const label = s.name || 'Untitled';
+                html += `<option value="${s.id}"${active}>${label}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        // ============================================================
+        //  ANALYSIS (unchanged)
+        // ============================================================
+        function runAnalysis() {
+            const text = document.getElementById('inputText').value;
+            const cleaned = cleanText(text);
+            const total = cleaned.length;
+            document.getElementById('statTotal').textContent = total;
+            if (total > 1) {
+                const counts = {};
+                for (const c of cleaned) counts[c] = (counts[c] || 0) + 1;
+                let sum = 0;
+                for (const c in counts) { const n = counts[c];
+                    sum += n * (n - 1); }
+                const ic = sum / (total * (total - 1));
+                document.getElementById('icValue').textContent = ic.toFixed(6);
+                const pct = Math.min((ic / 0.1) * 100, 100);
+                document.getElementById('icBar').style.width = pct + '%';
+            } else {
+                document.getElementById('icValue').textContent = '0.0000';
+                document.getElementById('icBar').style.width = '0%';
+            }
+            if (!total) {
+                document.getElementById('statUnique').textContent = '0';
+                document.getElementById('statMost').textContent = '—';
+                document.getElementById('chartBars').innerHTML = '';
+                document.getElementById('chartNote').textContent = 'No text to analyze.';
+                return;
+            }
+            const counts = {};
+            for (const c of cleaned) counts[c] = (counts[c] || 0) + 1;
+            const unique = Object.keys(counts).length;
+            document.getElementById('statUnique').textContent = unique;
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            document.getElementById('statMost').textContent = sorted.length > 0 ? sorted[0][0] : '—';
+            const maxPct = Math.max(...ALPHABET.split('').map(c => (counts[c] || 0) / total * 100), 5);
+            const scale = 140 / Math.max(maxPct, 5);
+            let chartHTML = '';
+            for (const c of ALPHABET) {
+                const pct = (counts[c] || 0) / total * 100;
+                const eng = ENGLISH_FREQ[c] || 0;
+                const h1 = Math.max(pct * scale, 2);
+                const h2 = Math.max(eng * scale, 2);
+                chartHTML += `
+                    <div class="bar-wrap">
+                        <div class="bar text" style="height:${h1}px;"></div>
+                        <div class="bar english" style="height:${h2}px;"></div>
+                        <div class="bar-label">${c}</div>
+                    </div>
+                `;
+            }
+            document.getElementById('chartBars').innerHTML = chartHTML;
+            document.getElementById('chartNote').textContent =
+                `Based on ${total} characters. Blue = your text, orange = English average.`;
+        }
+
+        // ============================================================
+        //  DICTIONARY (unchanged)
+        // ============================================================
+        const BUILTIN_WORDS = ['test', 'cipher', 'code', 'encrypt', 'decrypt', 'key', 'shift', 'affine', 'vigenere', 'hill',
+            'permutation', 'autokey', 'security', 'cryptography', 'algorithm', 'modular', 'inverse', 'matrix'
+        ];
+
+        function searchDictionary() {
+            const query = document.getElementById('dictSearch').value.trim();
+            const results = document.getElementById('dictResults');
+            if (!query) { results.innerHTML = '<div class="text-gray-400 text-sm">Type a word to search.</div>'; return; }
+            fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(query)}`)
+                .then(res => { if (!res.ok) throw new Error('API error'); return res.json(); })
+                .then(data => {
+                    if (data && data.length > 0) {
+                        let html = '';
+                        for (const entry of data) {
+                            const word = entry.word || query;
+                            const meanings = entry.meanings || [];
+                            let defs = [];
+                            for (const m of meanings) {
+                                const part = m.partOfSpeech || '';
+                                const def = m.definitions && m.definitions[0] ? m.definitions[0].definition : '';
+                                if (def) defs.push(`${part}: ${def}`);
+                            }
+                            if (defs.length === 0) defs.push('(no definition)');
+                            html +=
+                                `<div class="dict-word"><span class="word">${word}</span><span class="freq">${defs.slice(0,2).join('; ')}</span></div>`;
+                        }
+                        results.innerHTML = html ||
+                            `<div class="text-gray-400 text-sm">No definitions found for "${query}".</div>`;
+                    } else {
+                        results.innerHTML = `<div class="text-gray-400 text-sm">No results for "${query}".</div>`;
+                    }
+                })
+                .catch(() => {
+                    const matches = BUILTIN_WORDS.filter(w => w.includes(query.toLowerCase()));
+                    if (matches.length === 0) {
+                        results.innerHTML =
+                            `<div class="text-gray-400 text-sm">No matches in built-in dictionary. API unavailable.</div>`;
+                        return;
+                    }
+                    let html = '';
+                    for (const w of matches.slice(0, 40)) {
+                        html +=
+                            `<div class="dict-word"><span class="word">${w}</span><span class="freq">${w.length} letters</span></div>`;
+                    }
+                    if (matches.length > 40) html +=
+                        `<div class="text-gray-400 text-sm">… and ${matches.length - 40} more</div>`;
+                    results.innerHTML = html;
+                });
+        }
+
+        // ============================================================
+        //  TOOLS (unchanged)
+        // ============================================================
+        function setupTools() {
+            function renderModInvTable(a) {
+                const container = document.getElementById('modInvResult');
+                const result = modInvWithSteps(a, 26);
+                if (result.inverse === -1) {
+                    container.innerHTML = `
+                        <div class="inv-no-inverse">
+                            <i class="fas fa-times-circle mr-1.5"></i>
+                            No inverse exists for ${a} mod 26 (gcd(${a},26) = ${gcd(a,26)} ≠ 1)
+                        </div>
+                    `;
+                    return;
+                }
+                const steps = result.steps;
+                let tableHtml = `
+                    <div class="inv-table-wrap">
+                        <table>
+                            <thead><tr><th>Step</th><th>q</th><th>r₁</th><th>r₂</th><th>r</th><th>t₁</th><th>t₂</th><th>t</th></tr></thead>
+                            <tbody>
+                `;
+                for (let i = 0; i < steps.length; i++) {
+                    const s = steps[i];
+                    const isFinal = (s.r2 === 0 && i > 0);
+                    const rowClass = isFinal ? 'final-row' : '';
+                    const qDisplay = s.q !== null ? s.q : '—';
+                    const rDisplay = s.r !== null ? s.r : '—';
+                    const tDisplay = s.t !== null ? s.t : '—';
+                    tableHtml += `
+                        <tr class="${rowClass}">
+                            <td class="step-col">${s.step}</td>
+                            <td>${qDisplay}</td>
+                            <td>${s.r1}</td>
+                            <td>${s.r2}</td>
+                            <td>${rDisplay}</td>
+                            <td>${s.t1}</td>
+                            <td>${s.t2}</td>
+                            <td>${tDisplay}</td>
+                        </tr>
+                    `;
+                }
+                tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="inv-result-box mt-2">
+                        <i class="fas fa-check-circle mr-1.5 text-emerald-600"></i>
+                        <strong>${a}⁻¹ mod 26 = ${result.inverse}</strong>
+                        &nbsp; (check: ${a} × ${result.inverse} = ${a * result.inverse} ≡ ${(a * result.inverse) % 26} mod 26)
+                    </div>
+                `;
+                container.innerHTML = tableHtml;
+            }
+
+            document.getElementById('modInvBtn').addEventListener('click', () => {
+                const val = parseInt(document.getElementById('modInvInput').value) || 0;
+                if (val < 0 || val > 25) {
+                    document.getElementById('modInvResult').innerHTML =
+                        `<div class="inv-no-inverse">Please enter a number between 0 and 25.</div>`;
+                    return;
+                }
+                renderModInvTable(val);
+            });
+            document.getElementById('modInvExampleBtn').addEventListener('click', () => {
+                document.getElementById('modInvInput').value = 5;
+                renderModInvTable(5);
+            });
+            document.getElementById('modInvExample2Btn').addEventListener('click', () => {
+                document.getElementById('modInvInput').value = 3;
+                renderModInvTable(3);
+            });
+
+            // Hill matrix tools
+            function renderHillMatrixInputs(n) {
+                const container = document.getElementById('hillToolMatrixGrid');
+                if (!container) return;
+                if (!Number.isFinite(n) || n < 2) n = 2;
+                const sizeInput = document.getElementById('hillToolMatrixSize');
+                if (sizeInput) sizeInput.value = n;
+                document.getElementById('hillToolMatrixSizeDisplay').textContent = n;
+                container.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+                const existing = container.querySelectorAll('input');
+                const vals = Array.from(existing).map(el => parseInt(el.value) || 0);
+                let idx = 0;
+                let html = '';
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        const val = (idx < vals.length) ? vals[idx] : 0;
+                        html +=
+                            `<input type="number" value="${val}" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />`;
+                        idx++;
+                    }
+                }
+                container.innerHTML = html;
+            }
+
+            function loadExampleMatrix() {
+                const n = Math.max(2, parseInt(document.getElementById('hillToolMatrixSize').value) || 2);
+                const container = document.getElementById('hillToolMatrixGrid');
+                const example = [
+                    [3, 2, 1],
+                    [1, 7, 2],
+                    [2, 3, 5]
+                ];
+                document.getElementById('hillToolMatrixSize').value = n;
+                document.getElementById('hillToolMatrixSizeDisplay').textContent = n;
+                container.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+                let html = '';
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        const val = (r < example.length && c < example[0].length) ? example[r][c] : 0;
+                        html +=
+                            `<input type="number" value="${val}" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />`;
+                    }
+                }
+                container.innerHTML = html;
+            }
+
+            function generateRandomHillMatrix() {
+                const n = Math.max(2, parseInt(document.getElementById('hillToolMatrixSize').value) || 2);
+                const container = document.getElementById('hillToolMatrixGrid');
+                document.getElementById('hillToolMatrixSize').value = n;
+                document.getElementById('hillToolMatrixSizeDisplay').textContent = n;
+                container.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+                let matrix = null;
+                for (let attempt = 0; attempt < 300; attempt++) {
+                    const candidate = Array.from({ length: n }, () => Array.from({ length: n }, () => Math.floor(Math
+                        .random() * 26)));
+                    const det = detMatrix(candidate);
+                    if (gcd(det, 26) === 1) { matrix = candidate; break; }
+                }
+                if (!matrix) {
+                    matrix = Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => (r === c ? 1 :
+                        0)));
+                }
+                let html = '';
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        html +=
+                            `<input type="number" value="${matrix[r][c]}" min="0" max="25" class="border border-gray-300 rounded px-1 py-0.5 text-sm text-center bg-white" />`;
+                    }
+                }
+                container.innerHTML = html;
+            }
+
+            function readMatrixFromUI() {
+                const inputs = document.querySelectorAll('#hillToolMatrixGrid input');
+                const n = Math.sqrt(inputs.length);
+                if (!Number.isInteger(n) || n === 0) return null;
+                const matrix = [];
+                for (let r = 0; r < n; r++) {
+                    const row = [];
+                    for (let c = 0; c < n; c++) {
+                        const val = parseInt(inputs[r * n + c].value) || 0;
+                        row.push(mod(val));
+                    }
+                    matrix.push(row);
+                }
+                return matrix;
+            }
+
+            function formatMatrixHTML(mat, label) {
+                if (!mat || mat.length === 0) return '';
+                const n = mat.length;
+                let html = `<div class="font-semibold text-gray-700 mt-2">${label}</div><div class="hill-matrix-wrapper">`;
+                html += `<div class="hill-matrix-inner" style="grid-template-columns: repeat(${n}, auto); gap: 0.2rem;">`;
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        const val = mod(mat[r][c]);
+                        html +=
+                            `<span class="px-2 py-0.5 text-center font-mono text-sm bg-white border border-gray-200 rounded">${val}</span>`;
+                    }
+                }
+                html += `</div></div>`;
+                return html;
+            }
+
+            function displayHillMatrixResult(matrix, mode) {
+                const output = document.getElementById('hillToolMatrixOutput');
+                if (!matrix) { output.innerHTML = '<span class="text-gray-400 font-sans italic">Invalid matrix.</span>'; return; }
+                const det = detMatrix(matrix);
+                const gcdVal = gcd(det, 26);
+                const adj = adjugateMatrix(matrix);
+                const inv = inverseMatrix(matrix);
+                let html = `<div class="hill-result-grid"><div>${formatMatrixHTML(matrix, 'Matrix K')}</div>`;
+                if (mode === 'det') {
+                    html +=
+                        `<div><div class="font-semibold text-gray-700">det(K) = ${det}</div><div class="text-sm text-gray-600 mt-1">gcd(det(K), 26) = ${gcdVal}</div></div>`;
+                    html += `</div>`;
+                    output.innerHTML = html;
+                    return;
+                }
+                if (mode === 'adj') {
+                    html +=
+                        `<div><div class="font-semibold text-gray-700">Adj(K)</div><div class="text-sm text-gray-600 mt-1">gcd(det(K), 26) = ${gcdVal}</div></div>`;
+                    html += `</div>`;
+                    html += `<div class="mt-2">${formatMatrixHTML(adj, 'Adjugate Matrix (Adj(K))')}</div>`;
+                    output.innerHTML = html;
+                    return;
+                }
+                if (mode === 'inverse') {
+                    html +=
+                        `<div><div class="font-semibold text-gray-700">K⁻¹</div><div class="text-sm text-gray-600 mt-1">gcd(det(K), 26) = ${gcdVal}</div></div>`;
+                    html += `</div>`;
+                    if (gcdVal !== 1) {
+                        html +=
+                            `<div class="inv-no-inverse mt-2"><i class="fas fa-times-circle mr-1.5"></i> Matrix is not invertible modulo 26 (gcd(det(K),26) ≠ 1).</div>`;
+                    } else {
+                        html += `<div class="mt-2">${formatMatrixHTML(inv, 'Inverse Matrix (K⁻¹)')}</div>`;
+                        const invDet = modInv(det);
+                        html +=
+                            `<div class="text-sm text-gray-600 mt-2">det(K)⁻¹ = ${invDet}, so K⁻¹ = det(K)⁻¹ · Adj(K) mod 26.</div>`;
+                    }
+                    output.innerHTML = html;
+                    return;
+                }
+                html +=
+                    `<div><span class="font-semibold text-gray-700">det(K) = ${det}</span><br><span class="text-sm text-gray-600">gcd(det, 26) = ${gcdVal}</span></div>`;
+                html += `</div>`;
+                if (gcdVal !== 1) {
+                    html +=
+                        `<div class="inv-no-inverse mt-2"><i class="fas fa-times-circle mr-1.5"></i> Matrix is not invertible modulo 26 (gcd(det,26) ≠ 1).</div>`;
+                    output.innerHTML = html;
+                    return;
+                }
+                const cof = cofactorMatrix(matrix);
+                html += `<div class="mt-3">${formatMatrixHTML(cof, 'Cofactor Matrix (C)')}</div>`;
+                html += `<div class="mt-2">${formatMatrixHTML(adj, 'Adjugate Matrix (Adj(K))')}</div>`;
+                html += `<div class="mt-2">${formatMatrixHTML(inv, 'Inverse Matrix (K⁻¹)')}</div>`;
+                output.innerHTML = html;
+            }
+
+            document.getElementById('hillToolMatrixSize').addEventListener('input', () => {
+                const n = Math.max(2, parseInt(document.getElementById('hillToolMatrixSize').value) || 2);
+                document.getElementById('hillToolMatrixSize').value = n;
+                document.getElementById('hillToolMatrixSizeDisplay').textContent = n;
+                renderHillMatrixInputs(n);
+            });
+            document.getElementById('hillMatrixRandomBtn').addEventListener('click', generateRandomHillMatrix);
+            document.getElementById('hillMatrixDetBtn').addEventListener('click', () => {
+                const matrix = readMatrixFromUI();
+                if (!matrix) { document.getElementById('hillToolMatrixOutput').innerHTML =
+                        '<span class="text-gray-400 font-sans italic">Could not read matrix.</span>'; return; }
+                displayHillMatrixResult(matrix, 'det');
+            });
+            document.getElementById('hillMatrixAdjBtn').addEventListener('click', () => {
+                const matrix = readMatrixFromUI();
+                if (!matrix) { document.getElementById('hillToolMatrixOutput').innerHTML =
+                        '<span class="text-gray-400 font-sans italic">Could not read matrix.</span>'; return; }
+                displayHillMatrixResult(matrix, 'adj');
+            });
+            document.getElementById('hillMatrixInverseBtn').addEventListener('click', () => {
+                const matrix = readMatrixFromUI();
+                if (!matrix) { document.getElementById('hillToolMatrixOutput').innerHTML =
+                        '<span class="text-gray-400 font-sans italic">Could not read matrix.</span>'; return; }
+                displayHillMatrixResult(matrix, 'inverse');
+            });
+
+            // GCD
+            document.getElementById('gcdBtn').addEventListener('click', () => {
+                const val = parseInt(document.getElementById('gcdInput').value) || 0;
+                const g = gcd(val, 26);
+                document.getElementById('gcdResult').textContent =
+                    `gcd(${val}, 26) = ${g}  → ${g === 1 ? '✅ Valid for Affine' : '❌ Invalid (must be 1)'}`;
+            });
+
+            // Letter Replace
+            document.getElementById('repBtn').addEventListener('click', () => {
+                const text = document.getElementById('repText').value || '';
+                const from = document.getElementById('repFrom').value.toUpperCase().slice(0, 1);
+                const to = document.getElementById('repTo').value.toUpperCase().slice(0, 1);
+                if (!from || !to) { document.getElementById('repResult').textContent = 'Specify From and To.'; return; }
+                document.getElementById('repResult').textContent = text.replace(new RegExp(from, 'g'), to);
+            });
+
+            // Affine Check
+            document.getElementById('affineCheckBtn').addEventListener('click', () => {
+                const a = parseInt(document.getElementById('affineA').value) || 0;
+                const b = parseInt(document.getElementById('affineB').value) || 0;
+                const g = gcd(a, 26);
+                const valid = g === 1;
+                const inv = valid ? modInv(a) : -1;
+                let msg = `a=${a}, b=${b}  |  gcd(a,26)=${g}  → ${valid ? '✅ VALID' : '❌ INVALID'}`;
+                if (valid) msg += `  |  a⁻¹ = ${inv}`;
+                document.getElementById('affineCheckResult').textContent = msg;
+            });
+
+            // Caesar Brute Force
+            document.getElementById('bruteBtn').addEventListener('click', () => {
+                const text = document.getElementById('bruteText').value || '';
+                if (!text) { document.getElementById('bruteResult').textContent = 'Enter cipher text.'; return; }
+                let lines = '';
+                for (let k = 1; k < 26; k++) {
+                    const dec = shiftCipher(text, k, true);
+                    lines += `Shift ${String(k).padStart(2)}: ${dec}\n`;
+                }
+                document.getElementById('bruteResult').textContent = lines;
+            });
+
+            setTimeout(() => {
+                renderModInvTable(5);
+                renderHillMatrixInputs(3);
+                loadExampleMatrix();
+            }, 300);
+        }
+
+        // ============================================================
+        //  MODAL CONTROLS
+        // ============================================================
+        function setupModals() {
+            const overlays = document.querySelectorAll('.modal-overlay');
+            const closeBtns = document.querySelectorAll('[data-close]');
+            const featureBtns = document.querySelectorAll('[data-modal]');
+
+            featureBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.modal;
+                    const overlay = document.getElementById(id);
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                        overlay.classList.add('flex');
+                        document.body.style.overflow = 'hidden';
+                        if (id === 'analysisModal') runAnalysis();
+                        if (id === 'toolsModal') {
+                            const val = parseInt(document.getElementById('modInvInput').value) || 5;
+                            if (val >= 0 && val <= 25) renderModInvTable(val);
+                        }
+                    }
+                });
+            });
+
+            closeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.close;
+                    const overlay = document.getElementById(id);
+                    if (overlay) { overlay.classList.add('hidden');
+                        overlay.classList.remove('flex');
+                        document.body.style.overflow = ''; }
+                });
+            });
+
+            overlays.forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) { overlay.classList.add('hidden');
+                        overlay.classList.remove('flex');
+                        document.body.style.overflow = ''; }
+                });
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    overlays.forEach(o => {
+                        if (!o.classList.contains('hidden')) { o.classList.add('hidden');
+                            o.classList.remove('flex');
+                            document.body.style.overflow = ''; }
+                    });
+                }
+            });
+        }
+
+        // ============================================================
+        //  EXPORT / IMPORT
+        // ============================================================
+        async function exportSessions() {
+            const data = JSON.stringify(sessions, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cryptotool_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast('Sessions exported.');
+        }
+
+        function importSessions() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (!Array.isArray(data)) throw new Error('Invalid format');
+                        if (confirm('Import will replace all current sessions. Continue?')) {
+                            sessions = data;
+                            await dbSaveSessions(sessions);
+                            if (sessions.length > 0) { setActiveId(sessions[0].id);
+                                loadSession(sessions[0].id); } else { const fresh = createSession('Untitled');
+                                loadSession(fresh.id); }
+                            renderSessionSelect();
+                            toast(`Imported ${sessions.length} sessions.`);
+                        }
+                    } catch (err) { toast('Import failed: invalid file.'); }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // ============================================================
+        //  TOAST & AUTO-SAVE
+        // ============================================================
+        let toastTimer;
+
+        function toast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-5');
+            el.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                el.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+                el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-5');
+            }, 3000);
+        }
+
+        let saveTimeout = null;
+
+        function debounceAutoSave() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => { await saveCurrentSession(); }, 400);
+        }
+
+        // ============================================================
+        //  COMMENT
+        // ============================================================
+        function editComment() {
+            const id = getActiveId();
+            const session = sessions.find(s => s.id === id);
+            if (!session) { toast('No active session.'); return; }
+            const comment = prompt('Enter a comment for this session:', session.comment || '');
+            if (comment !== null) {
+                session.comment = comment.trim() || '';
+                const commentDisplay = document.getElementById('sessionCommentDisplay');
+                if (session.comment) { commentDisplay.textContent = '✏️ ' + session.comment;
+                    commentDisplay.classList.remove('hidden'); } else { commentDisplay.textContent = '';
+                    commentDisplay.classList.add('hidden'); }
+                dbSaveSessions(sessions);
+                toast('Comment updated.');
+            }
+        }
+
+        // ============================================================
+        //  INIT
+        // ============================================================
+        async function init() {
+            sessions = await dbLoadSessions();
+            if (sessions.length === 0) {
+                const defaultSession = createSession('Untitled');
+                sessions = [defaultSession];
+                await dbSaveSessions(sessions);
+            }
+            let active = getActiveSession();
+            if (!active) { active = sessions[0];
+                setActiveId(active.id); }
+            restoreState(active);
+            renderSessionSelect();
+
+            document.getElementById('cipherSelect').addEventListener('change', () => { renderKeyInputs();
+                validateKeyInputs();
+                debounceAutoSave(); });
+            document.getElementById('opSelect').addEventListener('change', debounceAutoSave);
+            document.getElementById('inputText').addEventListener('input', debounceAutoSave);
+            document.getElementById('runBtn').addEventListener('click', runCipher);
+            document.getElementById('stepsBtn').addEventListener('click', () => {
+                const modal = document.getElementById('stepsModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+                // Run with steps and display
+                runCipherWithSteps();
+            });
+
+            document.getElementById('swapBtn').addEventListener('click', () => {
+                const out = document.getElementById('outputBox');
+                const inp = document.getElementById('inputText');
+                const text = out.textContent;
+                if (text && !text.includes('empty') && !text.startsWith('ERROR')) {
+                    const temp = inp.value;
+                    inp.value = text;
+                    out.innerHTML = `<span class="text-gray-400 font-sans italic">${temp || '(empty)'}</span>`;
+                    toast('Swapped input/output.');
+                    debounceAutoSave();
+                } else { toast('No valid output to swap.'); }
+            });
+
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                document.getElementById('inputText').value = '';
+                document.getElementById('outputBox').innerHTML =
+                    '<span class="text-gray-400 font-sans italic">Run an operation to see result</span>';
+                document.getElementById('lastRun').textContent = '—';
+                document.getElementById('keyUsed').textContent = '—';
+                document.getElementById('statusMsg').textContent = 'Cleared';
+                debounceAutoSave();
+            });
+
+            document.getElementById('commentBtn').addEventListener('click', editComment);
+
+            document.getElementById('sessionNewBtn').addEventListener('click', () => {
+                const name = prompt('Session name:', 'My Session');
+                if (name !== null) {
+                    const s = createSession(name || 'Untitled');
+                    sessions.unshift(s);
+                    dbSaveSessions(sessions);
+                    loadSession(s.id);
+                    renderSessionSelect();
+                }
+            });
+
+            document.getElementById('sessionSaveBtn').addEventListener('click', async () => {
+                await saveCurrentSession();
+                renderSessionSelect();
+            });
+
+            document.getElementById('sessionDeleteBtn').addEventListener('click', async () => {
+                if (confirm('Delete the current session?')) { await deleteActiveSession();
+                    renderSessionSelect(); }
+            });
+
+            document.getElementById('sessionExportBtn').addEventListener('click', exportSessions);
+            document.getElementById('sessionImportBtn').addEventListener('click', importSessions);
+
+            document.getElementById('sessionSelect').addEventListener('change', (e) => {
+                const id = e.target.value;
+                if (id) {
+                    saveCurrentSession().then(() => { loadSession(id);
+                        renderSessionSelect(); });
+                }
+            });
+
+            document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
+            document.getElementById('dictSearchBtn').addEventListener('click', searchDictionary);
+            document.getElementById('dictClearBtn').addEventListener('click', () => {
+                document.getElementById('dictSearch').value = '';
+                document.getElementById('dictResults').innerHTML =
+                    '<div class="text-gray-400 text-sm">Type a word and hit Search.</div>';
+            });
+            document.getElementById('dictSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter')
+                    searchDictionary(); });
+
+            setupTools();
+            setupModals();
+
+            setTimeout(validateKeyInputs, 200);
+            console.log('🔐 CryptoTool v4 ready — Steps modal shows detailed calculations!');
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
