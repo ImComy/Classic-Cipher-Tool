@@ -3,7 +3,6 @@ import {
   mod,
   gcd,
   modInvWithSteps,
-  adjugateMatrix,
   inverseMatrix,
   renderMatrixHTML,
   detWithSteps,

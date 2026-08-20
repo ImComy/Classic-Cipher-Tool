@@ -88,14 +88,6 @@ export const AffineKeyInput: React.FC = () => {
     toast('Random affine key generated.')
   }
 
-  const presets = [
-    { a: 5, b: 3, label: '5,3' },
-    { a: 3, b: 7, label: '3,7' },
-    { a: 7, b: 2, label: '7,2' },
-    { a: 9, b: 5, label: '9,5' },
-    { a: 11, b: 8, label: '11,8' },
-  ]
-
   return (
     <div className="w-full p-4 space-y-4">
       {/* Header */}

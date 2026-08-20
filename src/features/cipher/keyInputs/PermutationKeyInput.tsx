@@ -13,8 +13,8 @@ export const PermutationKeyInput: React.FC = () => {
   const perm = keyData.perm ?? '2,4,1,3'
   const parts = perm
     .split(',')
-    .map(s => parseInt(s.trim(), 10))
-    .filter(n => !isNaN(n))
+    .map((s: string) => parseInt(s.trim(), 10))
+    .filter((n: number) => !isNaN(n))
 
   const sorted = [...parts].sort((a, b) => a - b)
   const n = parts.length

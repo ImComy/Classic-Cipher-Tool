@@ -242,7 +242,7 @@ export const SubstitutionKeyInput: React.FC = () => {
               </div>
               <div className="flex items-center gap-0.5">
                 <span className="text-[10px] font-semibold text-gray-400 mr-2 w-12 text-right">Cipher</span>
-                {alphabetArray.map((c, i) => {
+                {alphabetArray.map((_c, i) => {
                   const display = getMappedChar(i)
                   return (
                     <span

@@ -1,5 +1,5 @@
 import type { Cipher, CipherResult, Step, Mapping } from '../types'
-import { mod, gcd, modInv, modInvWithSteps } from '../utils/math'
+import { mod, gcd, modInvWithSteps } from '../utils/math'
 import { cleanText } from '../utils/string'
 
 export const AffineCipher: Cipher = {

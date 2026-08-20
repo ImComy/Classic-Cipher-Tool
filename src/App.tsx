@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAppDispatch, useAppSelector } from './store'
 import { loadSessions, updateActiveSessionData } from './store/slices/sessionSlice'
 import { restoreCipherState } from './store/slices/cipherSlice'
-import { openModal, closeModal } from './store/slices/uiSlice'
+import { closeModal } from './store/slices/uiSlice'
 import { Header } from './components/Header'
 import { SessionSidebar } from './components/SessionSidebar'
 import { CipherRunner } from './features/cipher/CipherRunner'
@@ -13,7 +13,6 @@ import { AnalysisModal } from './features/analysis/AnalysisModal'
 import { DictionaryModal } from './features/dictionary/DictionaryModal'
 import { ToolsModal } from './features/tools/ToolsModal'
 import { Toast } from './components/ui/Toast'
-import { Button } from './components/ui/Button'
 
 export function App() {
   const dispatch = useAppDispatch()
