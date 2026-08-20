@@ -17,19 +17,31 @@ export const SubstitutionCipher: Cipher = {
 function runSubstitution(text: string, keyMap: string, decrypt: boolean): CipherResult {
   const s = cleanText(text)
   const steps: Step[] = []
-  const parsed = parseKeyWithNumbers(keyMap)
-  const clean = parsed.toUpperCase().replace(/[^A-Z]/g, '')
 
-  if (clean.length !== 26 || new Set(clean).size !== 26) {
-    steps.push({ type: 'error', label: 'Error', detail: 'Key must be 26 unique letters.' })
-    return { result: 'ERROR: invalid key (must be 26 unique letters)', steps }
+  // Extract only letters A-Z from the key, keep '.' as identity marker
+  const rawKey = parseKeyWithNumbers(keyMap).toUpperCase().replace(/[^A-Z.]/g, '')
+  const keyLetters = rawKey.split('')
+
+  // Build forward mapping:
+  // - if a position is defined and not '.', use that letter
+  // - if it's '.' or missing, map to the plaintext letter itself (identity)
+  const fwd: Record<string, string> = {}
+  for (let i = 0; i < 26; i++) {
+    const plain = ALPHABET[i]
+    let mapped = (i < keyLetters.length) ? keyLetters[i] : plain
+    if (mapped === '.') mapped = plain  // identity placeholder
+    fwd[plain] = mapped
   }
 
-  const fwd: Record<string, string> = {}
+  // Build reverse mapping: ciphertext -> plaintext
+  // For identity mappings, we include them explicitly so decryption works correctly.
   const rev: Record<string, string> = {}
-  for (let i = 0; i < 26; i++) {
-    fwd[ALPHABET[i]] = clean[i]
-    rev[clean[i]] = ALPHABET[i]
+  for (const plain of ALPHABET) {
+    const cipher = fwd[plain]
+    // If two plaintext letters map to the same cipher, keep the first mapping.
+    if (!rev[cipher]) {
+      rev[cipher] = plain
+    }
   }
 
   const use = decrypt ? rev : fwd
@@ -37,13 +49,21 @@ function runSubstitution(text: string, keyMap: string, decrypt: boolean): Cipher
 
   steps.push({ type: 'info', label: 'Input', detail: `"${text}" → cleaned: "${s}"` })
   steps.push({ type: 'info', label: 'Key', detail: `Substitution mapping (${mode})` })
-  const mapDisplay = ALPHABET.split('').map((c, i) => `${c}→${clean[i]}`).join('  ')
-  steps.push({ type: 'info', label: 'Mapping', detail: mapDisplay })
+
+  // Show non‑identity mappings only
+  const mappingsDisplay = ALPHABET.split('')
+    .map(c => {
+      const mapped = fwd[c]
+      return (mapped !== c) ? `${c}→${mapped}` : null
+    })
+    .filter(Boolean)
+    .join('  ')
+  steps.push({ type: 'info', label: 'Mapping', detail: mappingsDisplay || 'all identity' })
 
   const mappings: Mapping[] = []
   let result = ''
   for (const c of s) {
-    const mapped = use[c] || c
+    const mapped = use[c] || c   // fallback to original if not found (shouldn't happen)
     mappings.push({ char: c, newChar: mapped, formula: `${c} → ${mapped}` })
     result += mapped
   }

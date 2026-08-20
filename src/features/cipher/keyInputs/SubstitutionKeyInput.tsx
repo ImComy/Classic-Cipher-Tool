@@ -13,55 +13,55 @@ export const SubstitutionKeyInput: React.FC = () => {
   const alphabetArray = ALPHABET.split('')
   const [keyString, setKeyString] = useState<string>('')
 
+  // Sync with Redux on mount and when keyData changes
   useEffect(() => {
-    const raw = keyData.map ?? ''
-    let fixed = raw.padEnd(26, '.')
-    if (fixed.length > 26) fixed = fixed.slice(0, 26)
-    // Keep only letters A-Z or '.', and convert identity letters to '.'
-    fixed = fixed
-      .split('')
-      .map((c, i) => {
-        if (c >= 'A' && c <= 'Z') {
-          // If the letter is the same as the plaintext, treat as identity
-          return c === alphabetArray[i] ? '.' : c
-        }
-        return '.'
-      })
-      .join('')
-    setKeyString(fixed)
-  }, [keyData.map, alphabetArray])
+    setKeyString(keyData.map || '')
+  }, [keyData.map])
 
-  const mappedCount = keyString.split('').filter((c, i) => c !== '.' && c !== alphabetArray[i]).length
-  const isComplete = mappedCount === 26
-  const statusText = isComplete ? 'Complete ✓' : `Partial (${mappedCount}/26 mapped)`
-  const statusColor = isComplete ? 'green' : 'yellow'
+  // Get the mapping for a specific position
+  const getMappedChar = (index: number): string => {
+    if (index < keyString.length) {
+      const mapped = keyString[index]
+      // If it's the same as the plaintext letter, treat as identity
+      return mapped === alphabetArray[index] ? '.' : mapped
+    }
+    return '.'
+  }
+
+  const isMapped = (index: number): boolean => {
+    const c = getMappedChar(index)
+    return c !== '.'
+  }
 
   const updatePosition = (index: number, char: string) => {
-    // If char is '.', explicitly set identity
-    if (char === '.') {
-      const newKey = keyString.slice(0, index) + '.' + keyString.slice(index + 1)
-      setKeyString(newKey)
-      dispatch(setKeyData({ map: newKey }))
-      return
+    let newKey = keyString
+    // If the char is the same as the plaintext, we could keep it, but we'll remove it to treat as identity
+    // However, to keep the key simple, we'll allow it; the cipher will map it to itself anyway.
+    // We'll just set the character at that position.
+    if (index >= newKey.length) {
+      // Pad with spaces (or nothing) to reach index
+      const pad = ' '.repeat(index - newKey.length)
+      newKey = newKey + pad + char
+    } else {
+      // Replace character at index
+      newKey = newKey.slice(0, index) + char + newKey.slice(index + 1)
     }
-
-    // Otherwise, only allow A-Z
-    let newChar = char.toUpperCase()
-    if (!/^[A-Z]$/.test(newChar)) return
-
-    // If the typed letter equals the plaintext, treat as identity
-    if (newChar === alphabetArray[index]) {
-      newChar = '.'
-    }
-
-    const newKey = keyString.slice(0, index) + newChar + keyString.slice(index + 1)
-    setKeyString(newKey)
-    dispatch(setKeyData({ map: newKey }))
+    // Remove any spaces (they are placeholders)
+    const cleaned = newKey.replace(/ /g, '')
+    setKeyString(cleaned)
+    dispatch(setKeyData({ map: cleaned }))
   }
 
   const handleGridChange = (index: number, val: string) => {
     let char = val.toUpperCase().replace(/[^A-Z]/g, '')
     if (char.length > 1) char = char.slice(-1)
+    if (char.length === 0) {
+      // If cleared, remove the mapping at this position
+      const newKey = keyString.slice(0, index) + keyString.slice(index + 1)
+      setKeyString(newKey)
+      dispatch(setKeyData({ map: newKey }))
+      return
+    }
     updatePosition(index, char)
   }
 
@@ -69,7 +69,10 @@ export const SubstitutionKeyInput: React.FC = () => {
     const key = e.key
     if (key === 'Backspace' || key === 'Delete') {
       e.preventDefault()
-      updatePosition(index, '.')
+      // Remove mapping at this position
+      const newKey = keyString.slice(0, index) + keyString.slice(index + 1)
+      setKeyString(newKey)
+      dispatch(setKeyData({ map: newKey }))
       return
     }
     if (key.length === 1 && key >= 'a' && key <= 'z') {
@@ -80,14 +83,9 @@ export const SubstitutionKeyInput: React.FC = () => {
   }
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = e.target.value.toUpperCase()
-    raw = raw.replace(/[^A-Z.]/g, '')
-    let fixed = raw.padEnd(26, '.')
-    if (fixed.length > 26) fixed = fixed.slice(0, 26)
-    // Convert identity letters to '.'
-    const cleaned = fixed.split('').map((c, i) => (c === alphabetArray[i] ? '.' : c)).join('')
-    setKeyString(cleaned)
-    dispatch(setKeyData({ map: cleaned }))
+    const raw = e.target.value.toUpperCase().replace(/[^A-Z]/g, '')
+    setKeyString(raw)
+    dispatch(setKeyData({ map: raw }))
   }
 
   const handleRandom = () => {
@@ -97,29 +95,23 @@ export const SubstitutionKeyInput: React.FC = () => {
     toast('Random substitution key generated.')
   }
 
-  const isMapped = (index: number) => {
-    const c = keyString[index] || '.'
-    return c !== '.' && c !== alphabetArray[index]
+  const handleClear = () => {
+    setKeyString('')
+    dispatch(setKeyData({ map: '' }))
   }
 
-  const displayChar = (index: number) => {
-    const c = keyString[index] || '.'
-    return c === '.' ? alphabetArray[index] : c
-  }
-
-  const missingLetters = alphabetArray.filter((_, i) => {
-    const c = keyString[i] || '.'
-    return c === '.' || c === alphabetArray[i]
-  })
+  // Count how many positions have a mapping (non-identity)
+  const mappedCount = keyString.split('').filter((c, i) => c !== alphabetArray[i]).length
 
   return (
     <div className="w-full p-4 space-y-4">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">
             Key:{' '}
-            <span className={`font-bold text-${statusColor}-600`}>{statusText}</span>
+            <span className="font-bold text-primary-600">
+              {mappedCount}/26 mapped
+            </span>
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -146,6 +138,9 @@ export const SubstitutionKeyInput: React.FC = () => {
           <Button variant="accent" size="xs" onClick={handleRandom}>
             <i className="fas fa-dice mr-1.5"></i> Random
           </Button>
+          <Button variant="outline" size="xs" onClick={handleClear}>
+            <i className="fas fa-eraser mr-1.5"></i> Clear
+          </Button>
         </div>
       </div>
 
@@ -155,7 +150,7 @@ export const SubstitutionKeyInput: React.FC = () => {
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-13 gap-2 sm:gap-2.5">
             {alphabetArray.map((letter, idx) => {
               const mapped = isMapped(idx)
-              const display = displayChar(idx)
+              const display = getMappedChar(idx) === '.' ? '' : getMappedChar(idx)
 
               return (
                 <div
@@ -173,8 +168,7 @@ export const SubstitutionKeyInput: React.FC = () => {
                 >
                   <span className="text-xs font-bold text-gray-500 uppercase">{letter}</span>
                   <i
-                    className={`fas fa-arrow-down text-[10px] my-0.5 ${mapped ? 'text-primary-500' : 'text-gray-300'
-                      }`}
+                    className={`fas fa-arrow-down text-[10px] my-0.5 ${mapped ? 'text-primary-500' : 'text-gray-300'}`}
                   />
                   <input
                     type="text"
@@ -185,7 +179,7 @@ export const SubstitutionKeyInput: React.FC = () => {
                       outline-none focus:ring-2 focus:ring-primary-300
                       ${mapped
                         ? 'border-primary-400 bg-white text-primary-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-400'
+                        : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-400'
                       }
                     `}
                     maxLength={1}
@@ -194,14 +188,18 @@ export const SubstitutionKeyInput: React.FC = () => {
                     onKeyDown={e => handleGridKeyDown(idx, e)}
                     onFocus={e => e.currentTarget.select()}
                     onClick={e => e.currentTarget.select()}
-                    placeholder="?"
+                    placeholder="·"
                     spellCheck={false}
                     autoComplete="off"
                   />
                   {mapped && (
                     <button
                       className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 rounded-full bg-gray-200 text-gray-600 hover:bg-red-200 hover:text-red-700 flex items-center justify-center text-[8px] shadow-sm transition-colors"
-                      onClick={() => updatePosition(idx, '.')}
+                      onClick={() => {
+                        const newKey = keyString.slice(0, idx) + keyString.slice(idx + 1)
+                        setKeyString(newKey)
+                        dispatch(setKeyData({ map: newKey }))
+                      }}
                       title="Clear this mapping"
                     >
                       <i className="fas fa-times" />
@@ -212,28 +210,26 @@ export const SubstitutionKeyInput: React.FC = () => {
             })}
           </div>
           <p className="text-xs text-gray-400 text-center mt-1">
-            Click a cell and type any letter – it instantly replaces the current mapping.
-            Press Backspace or click the × to clear the mapping (reset to identity).
+            Click a cell and type a letter to set a mapping. Press Backspace or click × to clear.
           </p>
         </>
       )}
 
-      {/* Text View */}
+      {/* Text View – just a plain text input */}
       {isTextMode && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <input
             type="text"
             value={keyString}
             onChange={handleTextChange}
-            placeholder="Type 26 characters: letters or '.' for identity"
-            className="w-full px-3 py-2.5 text-center text-lg font-mono font-bold tracking-widest border border-gray-300 rounded-md bg-white text-gray-800 focus:border-primary-400 focus:ring-2 focus:ring-primary-300 focus:outline-none transition-colors"
+            placeholder="Type substitution key (e.g., QWERTYUIOPASDFGHJKLZXCVBNM)"
+            className="w-full px-4 py-2.5 text-lg font-mono border border-gray-300 rounded-md bg-white text-gray-800 focus:border-primary-400 focus:ring-2 focus:ring-primary-300 focus:outline-none transition-colors"
             spellCheck={false}
             autoComplete="off"
           />
-          <div className="text-xs text-gray-400 text-center">
-            Use a dot (<span className="font-mono">.</span>) for identity.
+          <div className="text-xs text-gray-400">
+            <span className="font-medium">How it works:</span> The first letter maps to A, second to B, etc. Letters you don't specify map to themselves.
           </div>
-
           <div className="bg-gray-50 rounded-md border border-gray-200 p-3 overflow-x-auto">
             <div className="flex flex-col items-center gap-1.5 min-w-max">
               <div className="flex items-center gap-0.5">
@@ -247,33 +243,19 @@ export const SubstitutionKeyInput: React.FC = () => {
               <div className="flex items-center gap-0.5">
                 <span className="text-[10px] font-semibold text-gray-400 mr-2 w-12 text-right">Cipher</span>
                 {alphabetArray.map((c, i) => {
-                  const mapped = isMapped(i)
-                  const display = displayChar(i)
+                  const display = getMappedChar(i)
                   return (
                     <span
                       key={`cipher-${i}`}
-                      className={`w-7 text-center text-sm font-mono font-bold ${mapped ? 'text-primary-600' : 'text-gray-300'
-                        }`}
+                      className={`w-7 text-center text-sm font-mono font-bold ${display !== '.' ? 'text-primary-600' : 'text-gray-300'}`}
                     >
-                      {mapped ? display : '·'}
+                      {display !== '.' ? display : '·'}
                     </span>
                   )
                 })}
               </div>
             </div>
           </div>
-
-          {missingLetters.length > 0 && (
-            <div className="text-xs text-gray-500 text-center bg-yellow-50 border border-yellow-200 rounded-md p-2">
-              <span className="font-medium">Identity mappings:</span> {missingLetters.join(', ')}
-              <span className="ml-1">(these letters map to themselves)</span>
-            </div>
-          )}
-
-          <p className="text-xs text-gray-400 text-center">
-            The top row is the plaintext alphabet; the bottom row shows the cipher mapping.
-            A <span className="text-gray-300">·</span> means identity (no change).
-          </p>
         </div>
       )}
     </div>
