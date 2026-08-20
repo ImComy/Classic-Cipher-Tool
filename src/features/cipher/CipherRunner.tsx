@@ -116,10 +116,24 @@ export const CipherRunner: React.FC = () => {
         {/* Cipher & Operation Selectors */}
         <CipherSelector />
 
-        {/* Dynamic Key Input */}
+        {/* Input Text - first */}
+        <div>
+          <label htmlFor="inputText" className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+            Input Text
+          </label>
+          <textarea
+            id="inputText"
+            value={inputText}
+            onChange={e => dispatch(setInputText(e.target.value))}
+            placeholder="Type or paste text to encrypt / decrypt…"
+            className="w-full min-h-[100px] px-4 py-3 text-sm font-mono border border-gray-200 rounded-lg bg-gray-50/50 text-gray-800 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20 outline-none transition resize-y placeholder:text-gray-400"
+          />
+        </div>
+
+        {/* Key Input - second */}
         <KeyInputArea />
 
-        {/* Action Buttons Row */}
+        {/* Action Buttons - third */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-1.5">
             <Button variant="outline" size="sm" onClick={handleSwap}>
@@ -129,25 +143,16 @@ export const CipherRunner: React.FC = () => {
               <i className="fas fa-eraser mr-1.5"></i> Clear
             </Button>
             <Button variant="primary" size="sm" onClick={handleSendToLab}>
-              <i className="fas fa-flask mr-1.5"></i> Send to Lab
+              <i className="fas fa-flask mr-1.5"></i> Send The Output to Lab
             </Button>
           </div>
         </div>
 
-        {/* Input / Output */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="inputText" className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
-              Input
-            </label>
-            <textarea
-              id="inputText"
-              value={inputText}
-              onChange={e => dispatch(setInputText(e.target.value))}
-              placeholder="Type or paste text to encrypt / decrypt…"
-              className="w-full min-h-[160px] px-4 py-3 text-sm font-mono border border-gray-200 rounded-lg bg-gray-50/50 text-gray-800 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20 outline-none transition resize-y placeholder:text-gray-400"
-            />
-          </div>
+        {/* Output - fourth */}
+        <div>
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+            Output
+          </label>
           <OutputBox />
         </div>
 

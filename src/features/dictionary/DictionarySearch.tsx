@@ -1,27 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 
-const BUILTIN_WORDS = [
-  'test',
-  'cipher',
-  'code',
-  'encrypt',
-  'decrypt',
-  'key',
-  'shift',
-  'affine',
-  'vigenere',
-  'hill',
-  'permutation',
-  'autokey',
-  'security',
-  'cryptography',
-  'algorithm',
-  'modular',
-  'inverse',
-  'matrix',
-]
-
 interface DictEntry {
   word: string
   definitions: string[]
@@ -29,95 +8,115 @@ interface DictEntry {
 
 export const DictionarySearch: React.FC = () => {
   const [query, setQuery] = useState('')
-  const [regexMode, setRegexMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [entries, setEntries] = useState<DictEntry[] | null>(null)
-  const [fallbackMatches, setFallbackMatches] = useState<string[] | null>(null)
-  const [patternMatches, setPatternMatches] = useState<string[] | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // Normal exact lookup using Free Dictionary API
+  const fetchExactDefinition = async (word: string): Promise<DictEntry[] | null> => {
+    try {
+      const res = await fetch(
+        `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`
+      )
+      if (!res.ok) return null
+      const data = await res.json()
+      if (!Array.isArray(data) || data.length === 0) return null
+
+      const results: DictEntry[] = []
+      for (const entry of data) {
+        const w = entry.word || word
+        const meanings = entry.meanings || []
+        const defs: string[] = []
+        for (const m of meanings) {
+          const part = m.partOfSpeech || ''
+          const def = m.definitions && m.definitions[0] ? m.definitions[0].definition : ''
+          if (def) defs.push(`${part}: ${def}`)
+        }
+        results.push({ word: w, definitions: defs.length > 0 ? defs : ['(no definition)'] })
+      }
+      return results
+    } catch {
+      return null
+    }
+  }
+
+  // Pattern search using Datamuse API (wildcards: * = any chars, ? = one char)
+  const fetchPatternMatches = async (pattern: string): Promise<DictEntry[] | null> => {
+    try {
+      // Clean pattern – only letters, *, ?
+      const clean = pattern.replace(/[^a-zA-Z*?]/g, '')
+      if (!clean) return null
+
+      const url = `https://api.datamuse.com/words?sp=${encodeURIComponent(clean)}&md=d`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Datamuse API error')
+      const data = await res.json()
+
+      if (!Array.isArray(data) || data.length === 0) return null
+
+      const results: DictEntry[] = []
+      for (const item of data) {
+        const word = item.word || ''
+        const defs = item.defs || []
+        const cleanedDefs = defs.map((d: string) => {
+          const parts = d.split('\t')
+          if (parts.length === 2) {
+            return `${parts[0]}: ${parts[1]}`
+          }
+          return d
+        })
+        results.push({
+          word,
+          definitions: cleanedDefs.length > 0 ? cleanedDefs : ['(no definition)']
+        })
+      }
+      return results
+    } catch {
+      return null
+    }
+  }
 
   const handleSearch = async () => {
     const trimmed = query.trim()
     if (!trimmed) {
       setEntries(null)
-      setFallbackMatches(null)
-      setPatternMatches(null)
-      setErrorMsg('Type a word to search.')
-      return
-    }
-
-    if (regexMode) {
-      let pattern: RegExp
-      try {
-        pattern = new RegExp(trimmed, 'i')
-      } catch {
-        setEntries(null)
-        setFallbackMatches(null)
-        setPatternMatches(null)
-        setErrorMsg('That pattern is not quite valid. Check the symbols and try again.')
-        return
-      }
-
-      const matches = BUILTIN_WORDS.filter(word => pattern.test(word))
-      setEntries(null)
-      setFallbackMatches(null)
-      setPatternMatches(matches.length > 0 ? matches : null)
-      setErrorMsg(matches.length > 0 ? null : `No built-in words match "${trimmed}".`)
+      setErrorMsg('Type a word or pattern to search.')
       return
     }
 
     setLoading(true)
     setErrorMsg(null)
     setEntries(null)
-    setFallbackMatches(null)
-    setPatternMatches(null)
 
-    try {
-      const res = await fetch(
-        `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(trimmed)}`
-      )
-      if (!res.ok) throw new Error('API error')
-      const data = await res.json()
+    // Auto-detect: if the query contains * or ?, treat as pattern
+    const isPattern = /[*?]/.test(trimmed)
 
-      if (Array.isArray(data) && data.length > 0) {
-        const results: DictEntry[] = []
-        for (const entry of data) {
-          const word = entry.word || trimmed
-          const meanings = entry.meanings || []
-          const defs: string[] = []
-          for (const m of meanings) {
-            const part = m.partOfSpeech || ''
-            const def = m.definitions && m.definitions[0] ? m.definitions[0].definition : ''
-            if (def) defs.push(`${part}: ${def}`)
-          }
-          results.push({ word, definitions: defs.length > 0 ? defs : ['(no definition)'] })
-        }
+    let results: DictEntry[] | null = null
+
+    if (isPattern) {
+      results = await fetchPatternMatches(trimmed)
+      if (!results || results.length === 0) {
+        setErrorMsg(`No words match pattern "${trimmed}".`)
+      } else {
         setEntries(results)
-      } else {
+      }
+    } else {
+      results = await fetchExactDefinition(trimmed)
+      if (!results) {
         setErrorMsg(`No results for "${trimmed}".`)
-      }
-    } catch {
-      const matches = BUILTIN_WORDS.filter(w => w.includes(trimmed.toLowerCase()))
-      if (matches.length > 0) {
-        setFallbackMatches(matches)
       } else {
-        setErrorMsg(`No matches in built-in dictionary. API unavailable.`)
+        setEntries(results)
       }
-    } finally {
-      setLoading(false)
     }
+
+    setLoading(false)
   }
 
   const handleClear = () => {
     setQuery('')
-    setRegexMode(false)
     setEntries(null)
-    setFallbackMatches(null)
-    setPatternMatches(null)
     setErrorMsg(null)
   }
-
-  const resultCount = entries?.length || fallbackMatches?.length || patternMatches?.length || 0
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -127,7 +126,7 @@ export const DictionarySearch: React.FC = () => {
           Dictionary Lookup
         </div>
         <p className="text-xs text-gray-400 mt-0.5">
-          Look up words to help with decryption and analysis
+          Exact words use the Free Dictionary API; patterns with <code className="bg-gray-200 px-1 rounded">*</code> or <code className="bg-gray-200 px-1 rounded">?</code> use Datamuse wildcard search.
         </p>
       </div>
 
@@ -142,7 +141,7 @@ export const DictionarySearch: React.FC = () => {
               onKeyDown={e => {
                 if (e.key === 'Enter') handleSearch()
               }}
-              placeholder={regexMode ? 'Try ^c.*r$ or [aeiou]' : 'Type a word…'}
+              placeholder="Type a word or pattern (e.g., t??k, crypto*)"
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-colors placeholder:text-gray-400"
             />
           </div>
@@ -163,52 +162,25 @@ export const DictionarySearch: React.FC = () => {
           </div>
         </div>
 
-        {/* Regex Toggle */}
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={regexMode}
-              onChange={e => {
-                setRegexMode(e.target.checked)
-                setEntries(null)
-                setFallbackMatches(null)
-                setPatternMatches(null)
-                setErrorMsg(null)
-              }}
-              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
-            />
-            <span className="font-medium">Pattern search</span>
-            <span className="text-xs text-gray-400">(regex)</span>
-          </label>
-          {regexMode && (
-            <span className="text-xs text-gray-400">
-              <i className="fas fa-info-circle mr-1"></i>
-              built-in only
-            </span>
-          )}
+        {/* Wildcard Help (tooltip) */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+          <strong>💡 Wildcard help:</strong>{' '}
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">*</code> matches any number of letters,{' '}
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">?</code> matches exactly one letter.
+          <span className="block mt-1 text-blue-600">
+            Example: <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">t??k</code> finds 4‑letter words starting with T and ending with K.
+          </span>
+          <span className="block mt-1 text-blue-600">
+            Example: <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">crypto*</code> finds words starting with "crypto".
+          </span>
         </div>
-
-        {/* Regex Help */}
-        {regexMode && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
-            <strong>Pattern guide:</strong>{' '}
-            <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">^</code> starts with,{' '}
-            <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">$</code> ends with,{' '}
-            <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">.</code> any single letter,{' '}
-            <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">.*</code> any letters.
-            <span className="block mt-1 text-blue-600">
-              Example: <code className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px]">^c.*r$</code> finds words starting with C and ending with R
-            </span>
-          </div>
-        )}
 
         {/* Results */}
         <div className="bg-gray-50 rounded-lg border border-gray-200 min-h-[80px] p-3">
           {entries && entries.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Results ({entries.length})
+                {entries.length} result{entries.length > 1 ? 's' : ''}
               </div>
               {entries.map((item, idx) => (
                 <div
@@ -235,29 +207,6 @@ export const DictionarySearch: React.FC = () => {
             </div>
           )}
 
-          {(fallbackMatches || patternMatches) && (
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                {fallbackMatches ? 'Built-in matches' : 'Pattern matches'} ({resultCount})
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {(fallbackMatches || patternMatches || []).slice(0, 50).map((word, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1 text-sm font-mono bg-white border border-gray-200 rounded-lg shadow-sm"
-                  >
-                    {word}
-                  </span>
-                ))}
-                {(fallbackMatches || patternMatches || []).length > 50 && (
-                  <span className="px-2.5 py-1 text-sm text-gray-400">
-                    + {(fallbackMatches || patternMatches || []).length - 50} more
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
           {errorMsg && (
             <div className="text-sm text-gray-500 italic text-center py-4">
               <i className="fas fa-info-circle mr-1.5 text-gray-400"></i>
@@ -265,9 +214,9 @@ export const DictionarySearch: React.FC = () => {
             </div>
           )}
 
-          {!entries && !fallbackMatches && !patternMatches && !errorMsg && (
+          {!entries && !errorMsg && (
             <div className="text-xs text-gray-400 italic text-center py-4">
-              {regexMode ? 'Try a pattern and hit Search.' : 'Type a word and hit Search.'}
+              Type a word or pattern (e.g., <code className="bg-gray-100 px-1 rounded">t??k</code>) and hit Search.
             </div>
           )}
         </div>

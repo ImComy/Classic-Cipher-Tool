@@ -4,7 +4,7 @@ import { setAffineA, setAffineB } from '../../../store/slices/labSlice'
 import { Button } from '../../../components/ui/Button'
 import { modInv, gcd } from '../../../lib/utils/math'
 
-// Include 0 as a valid (though non‑invertible) value for the slider
+// Valid a values (coprime with 26)
 const VALID_A_VALUES = [1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25]
 
 export const AffineLabTool: React.FC = () => {
@@ -20,6 +20,15 @@ export const AffineLabTool: React.FC = () => {
   )
   const [bSliderValue, setBSliderValue] = useState<number>(affineB)
 
+  // Set initial values to a=1, b=0 on mount
+  useEffect(() => {
+    if (affineA !== 1 || affineB !== 0) {
+      dispatch(setAffineA(1))
+      dispatch(setAffineB(0))
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync local state with Redux when values change (including the initial mount after dispatch)
   useEffect(() => {
     setAInputValue(String(affineA))
     setBInputValue(String(affineB))
@@ -29,7 +38,7 @@ export const AffineLabTool: React.FC = () => {
     setBSliderValue(affineB)
   }, [affineA, affineB])
 
-  // Reset to 0,0 as requested
+  // Reset to 1,0
   const handleReset = () => {
     dispatch(setAffineA(1))
     dispatch(setAffineB(0))

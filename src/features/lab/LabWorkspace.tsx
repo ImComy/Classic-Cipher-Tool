@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { useAppDispatch, useAppSelector } from '../../store'
 import {
   setCiphertext,
@@ -15,6 +15,7 @@ import { useLivePreview } from './useLivePreview'
 import { SubstitutionSolver } from './tools/SubstitutionSolver'
 import { CaesarLabTool } from './tools/CaesarLabTool'
 import { AffineLabTool } from './tools/AffineLabTool'
+import { cleanText } from '../../lib/utils/string'
 
 export const LabWorkspace: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -24,7 +25,12 @@ export const LabWorkspace: React.FC = () => {
   const { outputText } = useAppSelector((state) => state.cipher)
   const { toast } = useToast()
 
+  const [highlightChanges, setHighlightChanges] = useState(true)
+
   useLivePreview()
+
+  // Compute cleaned ciphertext (letters only, uppercase) – this is what the decryption uses
+  const cleanedCiphertext = useMemo(() => cleanText(ciphertext), [ciphertext])
 
   const handlePasteFromDesk = () => {
     if (outputText && !outputText.startsWith('ERROR')) {
@@ -63,6 +69,45 @@ export const LabWorkspace: React.FC = () => {
 
   const toggleTools = () => {
     dispatch(setToolsCollapsed(!toolsCollapsed))
+  }
+
+  // Build highlighted preview – compare char by char with the cleaned ciphertext
+  const renderPreview = () => {
+    if (!livePreview) {
+      return <span className="text-indigo-300 italic">Preview will appear here...</span>
+    }
+
+    if (!highlightChanges) {
+      return <span>{livePreview}</span>
+    }
+
+    // Both livePreview and cleanedCiphertext are the same length (letters only)
+    const previewChars = livePreview.split('')
+    const sourceChars = cleanedCiphertext.split('')
+
+    // In case lengths differ (shouldn't happen), fallback to simple display
+    if (previewChars.length !== sourceChars.length) {
+      return <span>{livePreview}</span>
+    }
+
+    return previewChars.map((char, i) => {
+      const sourceChar = sourceChars[i] || ' '
+      const isDifferent = char !== sourceChar
+      const isLetter = /[a-zA-Z]/.test(char)
+
+      // Only highlight letters that differ and are letters
+      if (isDifferent && isLetter) {
+        return (
+          <span
+            key={i}
+            className="bg-yellow-200/60 dark:bg-yellow-300/30 rounded px-0.5 py-0.5"
+          >
+            {char}
+          </span>
+        )
+      }
+      return <span key={i}>{char}</span>
+    })
   }
 
   return (
@@ -211,7 +256,17 @@ export const LabWorkspace: React.FC = () => {
               <i className="fas fa-eye text-indigo-400"></i>
               <span className="text-sm">Trial Decryption</span>
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex items-center gap-1.5">
+              {/* Highlight toggle */}
+              <Button
+                variant={highlightChanges ? 'primary' : 'outline'}
+                size="xs"
+                onClick={() => setHighlightChanges(!highlightChanges)}
+                className={`transition-colors ${highlightChanges ? 'bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <i className={`fas fa-highlighter mr-1 ${highlightChanges ? 'text-indigo-500' : ''}`}></i>
+                {highlightChanges ? 'Hide' : 'Show'} Changes
+              </Button>
               <Button variant="outline" size="xs" onClick={() => dispatch(resetLabState())}>
                 <i className="fas fa-rotate-left mr-1"></i> Reset
               </Button>
@@ -221,7 +276,7 @@ export const LabWorkspace: React.FC = () => {
             </div>
           </div>
           <div className="flex-1 p-4 bg-indigo-50/10 overflow-y-auto font-mono text-sm text-indigo-950 whitespace-pre-wrap break-all">
-            {livePreview || <span className="text-indigo-300 italic">Preview will appear here...</span>}
+            {renderPreview()}
           </div>
         </div>
       </div>

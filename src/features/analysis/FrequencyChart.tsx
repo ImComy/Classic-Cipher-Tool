@@ -1,12 +1,14 @@
 import React from 'react'
 import { type FrequencyAnalysisResult, ENGLISH_FREQ } from '../../lib/utils/frequency'
 import { ALPHABET } from '../../lib/utils/string'
+import { RepeatedSubstringsView } from './RepeatedSubstringsView'
 
 interface FrequencyChartProps {
   analysis: FrequencyAnalysisResult
+  text: string
 }
 
-export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis }) => {
+export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis, text }) => {
   const { counts, total, unique, mostCommon, ic, percentages, kasiski } = analysis
 
   const icPct = Math.min((ic / 0.1) * 100, 100)
@@ -107,7 +109,7 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis }) => {
       <div className="bg-white rounded border border-gray-200 p-3 mt-2 overflow-x-auto">
         {total > 0 ? (
           <>
-            <div className="chart-bars" id="chartBars">
+            <div className="flex items-end justify-center h-[150px] gap-1 overflow-hidden min-w-max">
               {ALPHABET.split('').map(c => {
                 const pct = percentages[c] || 0
                 const eng = ENGLISH_FREQ[c] || 0
@@ -115,18 +117,20 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis }) => {
                 const h2 = Math.max(eng * scale, 2)
 
                 return (
-                  <div key={c} className="bar-wrap">
-                    <div
-                      className="bar text"
-                      style={{ height: `${h1}px` }}
-                      title={`${c}: ${counts[c] || 0} (${pct.toFixed(1)}%)`}
-                    />
-                    <div
-                      className="bar english"
-                      style={{ height: `${h2}px` }}
-                      title={`English average: ${eng}%`}
-                    />
-                    <div className="bar-label">{c}</div>
+                  <div key={c} className="flex flex-col items-center justify-end flex-shrink-0">
+                    <div className="flex items-end gap-0.5">
+                      <div
+                        className="w-2 sm:w-2.5 md:w-3 bg-primary-500 rounded-t-sm"
+                        style={{ height: `${h1}px` }}
+                        title={`${c}: ${counts[c] || 0} (${pct.toFixed(1)}%)`}
+                      />
+                      <div
+                        className="w-2 sm:w-2.5 md:w-3 bg-accent-300 rounded-t-sm opacity-60"
+                        style={{ height: `${h2}px` }}
+                        title={`English average: ${eng}%`}
+                      />
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-1">{c}</div>
                   </div>
                 )
               })}
@@ -151,6 +155,9 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis }) => {
           </div>
         )}
       </div>
+
+      {/* Repeated Substrings - now using the new component */}
+      <RepeatedSubstringsView text={text} />
     </div>
   )
 }

@@ -22,13 +22,8 @@ export const SubstitutionSolver: React.FC = () => {
   }
 
   const handleKeyStringChange = (value: string) => {
-    // Clean the input: only letters A-Z, uppercase, limit to 26
     const clean = value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 26)
-
-    // Pad with empty strings if shorter than 26
     const padded = clean.padEnd(26, '')
-
-    // Update each mapping using the existing setSubMapping action
     alphabet.forEach((c, i) => {
       const mappedChar = padded[i] || ''
       dispatch(setSubMapping({ char: c, mappedTo: mappedChar }))
@@ -38,6 +33,25 @@ export const SubstitutionSolver: React.FC = () => {
   const handlePasteExample = () => {
     const example = 'QWERTYUIOPASDFGHJKLZXCVBNM'
     handleKeyStringChange(example)
+  }
+
+  // Grid keydown handler: replace on letter, clear on backspace/delete
+  const handleGridKeyDown = (
+    c: string,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    const key = e.key
+    if (key === 'Backspace' || key === 'Delete') {
+      e.preventDefault()
+      dispatch(setSubMapping({ char: c, mappedTo: '' }))
+      return
+    }
+    if (key.length === 1 && key >= 'a' && key <= 'z') {
+      e.preventDefault()
+      dispatch(setSubMapping({ char: c, mappedTo: key.toUpperCase() }))
+      return
+    }
+    // Allow other keys (arrows, tab, etc.)
   }
 
   return (
@@ -152,7 +166,9 @@ export const SubstitutionSolver: React.FC = () => {
                         dispatch(setSubMapping({ char: c, mappedTo: val }))
                       }
                     }}
-                    onFocus={e => e.target.select()}
+                    onKeyDown={e => handleGridKeyDown(c, e)}
+                    onFocus={e => e.currentTarget.select()}
+                    onClick={e => e.currentTarget.select()}
                     placeholder="?"
                     spellCheck={false}
                     autoComplete="off"
@@ -177,7 +193,8 @@ export const SubstitutionSolver: React.FC = () => {
           </div>
 
           <p className="text-xs text-gray-400 text-center mt-1">
-            Click a field and type a letter to map. Mapped cells are highlighted in blue.
+            Click a cell, then type any letter – it instantly replaces the current mapping.
+            Backspace or the × button clears the mapping.
           </p>
         </>
       )}
@@ -241,7 +258,7 @@ export const SubstitutionSolver: React.FC = () => {
           </div>
 
           <p className="text-xs text-gray-400 text-center mt-1">
-            Type or paste a 26-letter substitution key. Empty positions will show as <span className="text-gray-300">·</span>.
+            Type or paste a 26‑letter substitution key. Empty positions show as <span className="text-gray-300">·</span>.
           </p>
         </div>
       )}
