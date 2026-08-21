@@ -236,28 +236,6 @@ export const AffineLabTool: React.FC = () => {
           </div>
         </div>
 
-        {/* Presets */}
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Presets:</span>
-            {presets.map(({ a, b, label }) => (
-              <button
-                key={`${a}-${b}`}
-                className={`
-                  px-2 py-0.5 text-xs font-mono rounded border transition-colors
-                  ${affineA === a && affineB === b
-                    ? 'border-primary-400 bg-primary-50 text-primary-700'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                  }
-                `}
-                onClick={() => { dispatch(setAffineA(a)); dispatch(setAffineB(b)) }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Formula */}
         <div className={`
           rounded-md p-3 text-sm font-mono text-center border
