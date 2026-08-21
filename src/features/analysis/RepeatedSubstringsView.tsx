@@ -31,7 +31,7 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
   const cleanText = useMemo(() => text.replace(/[^a-zA-Z]/g, ''), [text])
   const lowerText = useMemo(() => cleanText.toLowerCase(), [cleanText])
 
-  // 1. Unrestricted discovery of all repeating substrings in the input text
+  // 1. Discover all repeating substrings (length >= 2)
   const allDiscoveredPatterns = useMemo((): RepeatedSubstring[] => {
     if (lowerText.length < 2) return []
 
@@ -57,7 +57,6 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
     return candidates
   }, [lowerText])
 
-  // Automatically determine max pattern size and max frequency count from discovered patterns
   const maxPatternSize = useMemo(() => {
     if (allDiscoveredPatterns.length === 0) return 2
     return Math.max(...allDiscoveredPatterns.map(p => p.substring.length))
@@ -71,20 +70,21 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
   const [patternSize, setPatternSize] = useState<number>(2)
   const [minCount, setMinCount] = useState<number>(2)
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'roots' | 'all'>('roots')
+  const [hoveredOccurrenceId, setHoveredOccurrenceId] = useState<string | null>(null)
 
-  // Auto-default to the largest discovered pattern size whenever input text changes
   useEffect(() => {
     setPatternSize(maxPatternSize)
     setMinCount(2)
     setSelectedPattern(null)
+    setViewMode('roots')
   }, [cleanText, maxPatternSize, maxMinCount])
 
-  // 2. Filter repeating substrings based on min count setting
   const filteredPatterns = useMemo(() => {
     return allDiscoveredPatterns.filter(p => p.count >= minCount)
   }, [allDiscoveredPatterns, minCount])
 
-  // 3. Build containment tree
+  // 2. Build containment tree
   const tree = useMemo((): TreeNode[] => {
     const nodes: TreeNode[] = filteredPatterns.map((item, idx) => ({
       ...item,
@@ -95,23 +95,27 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
     }))
 
     for (const node of nodes) {
-      let parent: TreeNode | null = null
-      let minParentLen = Infinity
+      let bestParent: TreeNode | null = null
+      let bestParentLen = Infinity
+
       for (const other of nodes) {
         if (other === node) continue
-        if (other.substring.length > node.substring.length && other.substring.includes(node.substring)) {
-          const isPositionalChild = node.positions.some(posB =>
-            other.positions.some(posA => posA <= posB && (posB + node.substring.length) <= (posA + other.substring.length))
+        if (other.substring.length > node.substring.length &&
+            other.substring.includes(node.substring)) {
+          const allCovered = node.positions.every(posB =>
+            other.positions.some(posA =>
+              posA <= posB && (posB + node.substring.length) <= (posA + other.substring.length)
+            )
           )
-          if (isPositionalChild && other.substring.length < minParentLen) {
-            parent = other
-            minParentLen = other.substring.length
+          if (allCovered && other.substring.length < bestParentLen) {
+            bestParent = other
+            bestParentLen = other.substring.length
           }
         }
       }
-      if (parent) {
-        node.parent = parent
-        parent.children.push(node)
+      if (bestParent) {
+        node.parent = bestParent
+        bestParent.children.push(node)
       }
     }
 
@@ -132,16 +136,10 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
     return tree.find(n => n.substring === selectedPattern) || null
   }, [selectedPattern, tree])
 
-  // Active patterns matching current pattern size
+  const rootPatterns = useMemo(() => tree.filter(n => n.parent === null), [tree])
   const sameSizePatterns = useMemo(() => {
     return tree.filter(n => n.substring.length === patternSize)
   }, [tree, patternSize])
-
-  // Currently displayed patterns on screen
-  const activeDisplayedPatterns = useMemo(() => {
-    if (selectedNode) return [selectedNode]
-    return sameSizePatterns
-  }, [selectedNode, sameSizePatterns])
 
   const handleSelectPattern = (substring: string) => {
     if (selectedPattern === substring) {
@@ -152,42 +150,179 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
     }
   }
 
-  // 4. Render highlighted text
-  const highlightedText = useMemo(() => {
-    if (!cleanText) return <span className="text-gray-400">No text provided.</span>
-
-    const charStyles: ({ color: string; label: string } | null)[] = new Array(cleanText.length).fill(null)
-
-    if (selectedNode) {
-      for (const pos of selectedNode.positions) {
-        for (let i = pos; i < pos + selectedNode.substring.length; i++) {
-          charStyles[i] = { color: selectedNode.color, label: selectedNode.substring }
-        }
-      }
-    } else if (sameSizePatterns.length > 0) {
-      for (const patternNode of sameSizePatterns) {
-        for (const pos of patternNode.positions) {
-          for (let i = pos; i < pos + patternNode.substring.length; i++) {
-            charStyles[i] = { color: patternNode.color, label: patternNode.substring }
-          }
-        }
+  // 3. Highlight text & calculate visible occurrences
+  const { highlightedText, visibleRootCounts } = useMemo(() => {
+    if (!cleanText) {
+      return {
+        highlightedText: <span className="text-gray-400">No text provided.</span>,
+        visibleRootCounts: new Map<string, number>()
       }
     }
 
-    return (
+    const countsMap = new Map<string, number>()
+
+    if (selectedNode || viewMode === 'roots') {
+      const activeSource = selectedNode 
+        ? [selectedNode] 
+        : [...rootPatterns].sort((a, b) => b.substring.length - a.substring.length || b.count - a.count)
+
+      const charAssigned = new Array(cleanText.length).fill(false)
+      const segments: React.ReactNode[] = []
+      const visibleCounts = new Map<string, number>()
+
+      interface ClaimedSegment {
+        start: number
+        end: number
+        node: TreeNode
+        occurrenceId: string
+      }
+
+      const claims: ClaimedSegment[] = []
+
+      for (const node of activeSource) {
+        let visibleOccurrences = 0
+        for (const pos of node.positions) {
+          let isFree = true
+          for (let i = pos; i < pos + node.substring.length; i++) {
+            if (charAssigned[i]) {
+              isFree = false
+              break
+            }
+          }
+
+          if (isFree) {
+            for (let i = pos; i < pos + node.substring.length; i++) {
+              charAssigned[i] = true
+            }
+            claims.push({
+              start: pos,
+              end: pos + node.substring.length,
+              node,
+              occurrenceId: `${node.substring}-${pos}`
+            })
+            visibleOccurrences++
+          }
+        }
+        visibleCounts.set(node.substring, visibleOccurrences)
+      }
+
+      claims.sort((a, b) => a.start - b.start)
+
+      let currentIndex = 0
+      for (const claim of claims) {
+        if (currentIndex < claim.start) {
+          const plainSub = cleanText.slice(currentIndex, claim.start)
+          for (let k = 0; k < plainSub.length; k++) {
+            const charIdx = currentIndex + k
+            segments.push(
+              <span key={`plain-${charIdx}`} className="inline-block hover:bg-gray-200 cursor-default px-0.5">
+                {plainSub[k]}
+              </span>
+            )
+          }
+        }
+
+        const subText = cleanText.slice(claim.start, claim.end)
+        const isHovered = claim.occurrenceId === hoveredOccurrenceId
+
+        segments.push(
+          <span
+            key={claim.occurrenceId}
+            onClick={() => handleSelectPattern(claim.node.substring)}
+            onMouseEnter={() => setHoveredOccurrenceId(claim.occurrenceId)}
+            onMouseLeave={() => setHoveredOccurrenceId(null)}
+            title={`Pattern: ${claim.node.substring} (Click to isolate)`}
+            className={`inline-block font-bold px-1 mx-0.5 rounded cursor-pointer transition-all duration-200 ${
+              isHovered ? 'shadow-md -translate-y-0.5 z-10' : 'shadow-sm'
+            }`}
+            style={{ backgroundColor: claim.node.color, color: '#ffffff' }}
+          >
+            {subText}
+          </span>
+        )
+
+        currentIndex = claim.end
+      }
+
+      if (currentIndex < cleanText.length) {
+        const plainSub = cleanText.slice(currentIndex)
+        for (let k = 0; k < plainSub.length; k++) {
+          const charIdx = currentIndex + k
+          segments.push(
+            <span key={`plain-${charIdx}`} className="inline-block hover:bg-gray-200 cursor-default px-0.5">
+              {plainSub[k]}
+            </span>
+          )
+        }
+      }
+
+      const renderedJSX = (
+        <div className="font-mono text-xs sm:text-sm leading-relaxed break-all max-w-full overflow-x-auto">
+          {segments}
+        </div>
+      )
+
+      return { highlightedText: renderedJSX, visibleRootCounts: visibleCounts }
+    } 
+    
+    // Fallback for "All Sizes" mode
+    const charStyles: ({ color: string; label: string; occurrenceId: string } | null)[] = new Array(cleanText.length).fill(null)
+    
+    for (let i = 0; i < cleanText.length; i++) {
+      let bestNode: TreeNode | null = null
+      let bestPos = -1
+      let bestLen = -1
+      let bestCount = -1
+
+      for (const node of sameSizePatterns) {
+        for (const pos of node.positions) {
+          if (pos <= i && i < pos + node.substring.length) {
+            if (node.substring.length > bestLen ||
+                (node.substring.length === bestLen && node.count > bestCount)) {
+              bestNode = node
+              bestPos = pos
+              bestLen = node.substring.length
+              bestCount = node.count
+            }
+            break
+          }
+        }
+      }
+      if (bestNode) {
+        const occurrenceId = `${bestNode.substring}-${bestPos}`
+        charStyles[i] = { color: bestNode.color, label: bestNode.substring, occurrenceId }
+      }
+    }
+
+    const renderedJSX = (
       <div className="font-mono text-xs sm:text-sm leading-relaxed break-all max-w-full overflow-x-auto">
         {cleanText.split('').map((char, i) => {
-          const styleInfo = charStyles[i]
+          const style = charStyles[i]
+          const isGroupHovered = style && style.occurrenceId === hoveredOccurrenceId
+
           return (
             <span
               key={i}
-              title={styleInfo ? `Pattern: ${styleInfo.label}` : undefined}
-              className={`inline-block text-center px-0.5 rounded transition-all duration-150 ${
-                styleInfo ? 'font-bold shadow-sm' : ''
+              onClick={() => {
+                if (style) handleSelectPattern(style.label)
+              }}
+              onMouseEnter={() => {
+                if (style) setHoveredOccurrenceId(style.occurrenceId)
+              }}
+              onMouseLeave={() => {
+                setHoveredOccurrenceId(null)
+              }}
+              title={style ? `Pattern: ${style.label} (Click to isolate)` : undefined}
+              className={`inline-block text-center px-0.5 rounded transition-all duration-250 ${
+                style 
+                  ? `font-bold cursor-pointer ${
+                      isGroupHovered ? 'shadow-md -translate-y-0.5 z-10' : 'shadow-sm'
+                    }` 
+                  : 'hover:bg-gray-200 cursor-default'
               }`}
               style={
-                styleInfo
-                  ? { backgroundColor: styleInfo.color, color: '#ffffff' }
+                style
+                  ? { backgroundColor: style.color, color: '#ffffff' }
                   : { color: 'inherit' }
               }
             >
@@ -197,9 +332,18 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
         })}
       </div>
     )
-  }, [cleanText, selectedNode, sameSizePatterns])
 
-  // 5. Render tree preview
+    return { highlightedText: renderedJSX, visibleRootCounts: countsMap }
+  }, [cleanText, selectedNode, viewMode, rootPatterns, sameSizePatterns, hoveredOccurrenceId])
+
+  // Active patterns for display
+  const activeDisplayedPatterns = useMemo(() => {
+    if (selectedNode) return [selectedNode]
+    if (viewMode === 'roots') return rootPatterns
+    return sameSizePatterns
+  }, [selectedNode, viewMode, rootPatterns, sameSizePatterns])
+
+  // 4. Render containment tree
   const renderTree = (nodes: TreeNode[]) => {
     const roots = nodes.filter(n => n.parent === null)
 
@@ -254,29 +398,62 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
 
   return (
     <div className="bg-white rounded border border-gray-200 p-3 sm:p-4 mt-2 shadow-sm max-w-full overflow-hidden">
-      {/* Dynamic Controls Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-200">
         <h3 className="text-sm font-semibold text-gray-800">Repeated Substrings Analysis</h3>
 
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-gray-600">
-          <label className="flex items-center gap-2">
-            <span>Pattern Size:</span>
-            <input
-              type="range"
-              min="2"
-              max={maxPatternSize}
-              value={patternSize}
-              onChange={(e) => {
-                const newSize = parseInt(e.target.value, 10)
-                setPatternSize(newSize)
+          {/* View toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded">
+            <button
+              onClick={() => {
+                setViewMode('roots')
                 setSelectedPattern(null)
               }}
-              className="w-20 sm:w-24 accent-blue-600"
-            />
-            <span className="font-mono font-bold text-blue-600 w-5 text-right">
-              {patternSize}
-            </span>
-          </label>
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                viewMode === 'roots'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Roots Only
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('all')
+                setSelectedPattern(null)
+              }}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                viewMode === 'all'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              All Sizes
+            </button>
+          </div>
+
+          {/* Slider only for All Sizes */}
+          {viewMode === 'all' && (
+            <label className="flex items-center gap-2">
+              <span>Pattern Size:</span>
+              <input
+                type="range"
+                min="2"
+                max={maxPatternSize}
+                value={patternSize}
+                onChange={(e) => {
+                  const newSize = parseInt(e.target.value, 10)
+                  setPatternSize(newSize)
+                  setSelectedPattern(null)
+                }}
+                className="w-20 sm:w-24 accent-blue-600"
+              />
+              <span className="font-mono font-bold text-blue-600 w-5 text-right">
+                {patternSize}
+              </span>
+            </label>
+          )}
 
           <label className="flex items-center gap-2">
             <span>Min Count:</span>
@@ -298,12 +475,14 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
         </div>
       </div>
 
-      {/* Active Pattern Tags Top Bar */}
+      {/* Pattern tags */}
       <div className="mb-3">
         <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
           <span className="font-medium text-gray-600">
             {selectedPattern
               ? 'Selected Pattern:'
+              : viewMode === 'roots'
+              ? 'Root Patterns:'
               : `Active Patterns (Size ${patternSize}):`}
           </span>
           {selectedPattern && (
@@ -311,7 +490,7 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
               onClick={() => setSelectedPattern(null)}
               className="text-blue-600 hover:underline font-medium"
             >
-              Reset to General View
+              Reset to {viewMode === 'roots' ? 'Roots' : 'General'} View
             </button>
           )}
         </div>
@@ -320,6 +499,10 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
           <div className="flex flex-wrap items-center gap-1.5">
             {activeDisplayedPatterns.map((node) => {
               const isSelected = selectedPattern === node.substring
+              const displayCount = viewMode === 'roots' && !selectedNode 
+                ? (visibleRootCounts.get(node.substring) ?? node.count) 
+                : node.count
+
               return (
                 <button
                   key={node.substring}
@@ -334,7 +517,7 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
                 >
                   <span>{node.substring}</span>
                   <span className="bg-black/20 px-1.5 py-0.5 rounded text-[10px] font-sans">
-                    ×{node.count}
+                    ×{displayCount}
                   </span>
                 </button>
               )
@@ -342,19 +525,19 @@ export const RepeatedSubstringsView: React.FC<RepeatedSubstringsViewProps> = ({ 
           </div>
         ) : (
           <span className="text-xs text-gray-400 italic">
-            No patterns found at size {patternSize} with count ≥ {minCount}.
+            No patterns found {viewMode === 'roots' ? 'without a parent' : `at size ${patternSize}`} with count ≥ {minCount}.
           </span>
         )}
       </div>
 
-      {/* Text Preview Box */}
+      {/* Highlighted text */}
       <div className="mb-4">
         <div className="border border-gray-200 rounded p-3 sm:p-4 bg-gray-50 min-h-[60px] max-w-full overflow-x-auto">
           {highlightedText}
         </div>
       </div>
 
-      {/* Containment Tree Preview */}
+      {/* Containment tree */}
       <div className="border-t border-gray-200 pt-3">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
           Containment Tree ({tree.length} total patterns)
