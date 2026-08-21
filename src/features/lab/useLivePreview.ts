@@ -28,7 +28,8 @@ export function useLivePreview() {
     const s = cleanText(ciphertext)
 
     switch (activeLabTool) {
-      case 'substitution': {
+      case 'substitution':
+      case 'substitution-bf': {
         for (const char of s) {
           result += subMapping[char] || char
         }
@@ -42,7 +43,8 @@ export function useLivePreview() {
         }
         break
       }
-      case 'affine': {
+      case 'affine':
+      case 'affine-bf': {
         result = AffineCipher.decrypt(s, { a: affineA, b: affineB }).result
         break
       }

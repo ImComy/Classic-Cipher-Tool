@@ -1,11 +1,16 @@
 import React, { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../../store'
-import { setSubMapping, clearSubMapping } from '../../../store/slices/labSlice'
+import { setSubMapping, clearSubMapping, setSubstitutionMapping } from '../../../store/slices/labSlice'
 import { Button } from '../../../components/ui/Button'
+import { useToast } from '../../../hooks/useToast'
+
+// English letter frequency order (most common to least)
+const ENGLISH_FREQ_ORDER = 'ETAOINSHRDLCUMWFGYPBVKJXQZ'.split('')
 
 export const SubstitutionSolver: React.FC = () => {
   const dispatch = useAppDispatch()
-  const { subMapping } = useAppSelector(state => state.lab)
+  const { subMapping, ciphertext } = useAppSelector(state => state.lab)
+  const { toast } = useToast()
 
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
   const [viewMode, setViewMode] = useState<'grid' | 'text'>('grid')
@@ -33,6 +38,38 @@ export const SubstitutionSolver: React.FC = () => {
   const handlePasteExample = () => {
     const example = 'QWERTYUIOPASDFGHJKLZXCVBNM'
     handleKeyStringChange(example)
+  }
+
+  // Auto‑map ciphertext letters by frequency to English letter frequencies
+  const handleAutoMap = () => {
+    const text = ciphertext
+    if (!text.trim()) {
+      toast('No ciphertext to analyse. Please enter some text first.')
+      return
+    }
+
+    // Count frequency of each letter (A–Z)
+    const freq: Record<string, number> = {}
+    for (const ch of text) {
+      if (/[A-Za-z]/.test(ch)) {
+        const upper = ch.toUpperCase()
+        freq[upper] = (freq[upper] || 0) + 1
+      }
+    }
+
+    // Sort letters by frequency descending
+    const sortedLetters = Object.keys(freq).sort((a, b) => freq[b] - freq[a])
+
+    // Build new mapping: most frequent cipher letter → most common English letter
+    const newMapping: Record<string, string> = {}
+    const limit = Math.min(sortedLetters.length, ENGLISH_FREQ_ORDER.length)
+    for (let i = 0; i < limit; i++) {
+      newMapping[sortedLetters[i]] = ENGLISH_FREQ_ORDER[i]
+    }
+
+    // Replace entire mapping with the new one
+    dispatch(setSubstitutionMapping(newMapping))
+    toast(`Auto‑mapped ${limit} letters by frequency.`)
   }
 
   // Grid keydown handler: replace on letter, clear on backspace/delete
@@ -95,6 +132,17 @@ export const SubstitutionSolver: React.FC = () => {
             </button>
           </div>
 
+          {/* Auto-map button */}
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={handleAutoMap}
+            className="text-indigo-600 hover:bg-indigo-50 border-indigo-200"
+          >
+            <i className="fas fa-magic mr-1.5"></i> Auto-map
+          </Button>
+
+          {/* Clear button */}
           <Button
             variant="outline"
             size="xs"
@@ -193,8 +241,7 @@ export const SubstitutionSolver: React.FC = () => {
           </div>
 
           <p className="text-xs text-gray-400 text-center mt-1">
-            Click a cell, then type any letter – it instantly replaces the current mapping.
-            Backspace or the × button clears the mapping.
+Use Auto-Mapping to automatically map frequent characters to the most common letters in the English language
           </p>
         </>
       )}

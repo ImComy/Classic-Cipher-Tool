@@ -4,9 +4,11 @@ interface LabState {
   ciphertext: string
   livePreview: string
   subMapping: Record<string, string>
-  activeLabTool: 'substitution' | 'caesar' | 'vigenere' | 'affine' | null
+  substitutionMapping: Record<string, string> | null
+  activeLabTool: 'substitution' | 'caesar' | 'vigenere' | 'affine' | 'substitution-bf' | 'affine-bf' | null
   affineA: number
   affineB: number
+  affineKey: { a: number; b: number } | null
   caesarShift: number | null
   vigenereKey: string
   toolsCollapsed: boolean
@@ -17,9 +19,11 @@ const initialState: LabState = {
   ciphertext: '',
   livePreview: '',
   subMapping: {},
+  substitutionMapping: null,
   activeLabTool: null,
-  affineA: 5,
-  affineB: 3,
+  affineA: 1,
+  affineB: 0,
+  affineKey: null,
   caesarShift: null,
   vigenereKey: 'KEY',
   toolsCollapsed: false,
@@ -43,18 +47,35 @@ const labSlice = createSlice({
       } else {
         state.subMapping[char] = mappedTo
       }
+      state.substitutionMapping = Object.keys(state.subMapping).length > 0 ? state.subMapping : null
+    },
+    setSubstitutionMapping: (state, action: PayloadAction<Record<string, string> | null>) => {
+      state.subMapping = action.payload ?? {}
+      state.substitutionMapping = action.payload ? { ...action.payload } : null
     },
     clearSubMapping: state => {
       state.subMapping = {}
+      state.substitutionMapping = null
     },
     setActiveLabTool: (state, action: PayloadAction<LabState['activeLabTool']>) => {
       state.activeLabTool = action.payload
     },
     setAffineA: (state, action: PayloadAction<number>) => {
       state.affineA = action.payload
+      state.affineKey = { a: action.payload, b: state.affineB }
     },
     setAffineB: (state, action: PayloadAction<number>) => {
       state.affineB = action.payload
+      state.affineKey = { a: state.affineA, b: action.payload }
+    },
+    setAffineKey: (state, action: PayloadAction<{ a: number; b: number } | null>) => {
+      if (!action.payload) {
+        state.affineKey = null
+        return
+      }
+      state.affineA = action.payload.a
+      state.affineB = action.payload.b
+      state.affineKey = action.payload
     },
     setCaesarShift: (state, action: PayloadAction<number | null>) => {
       state.caesarShift = action.payload
@@ -76,8 +97,8 @@ const labSlice = createSlice({
     resetLabState: state => {
       state.livePreview = state.ciphertext
       state.subMapping = {}
-      state.affineA = 5
-      state.affineB = 3
+      state.affineA = 1
+      state.affineB = 0
       state.caesarShift = null
       state.vigenereKey = 'KEY'
     },
@@ -88,10 +109,12 @@ export const {
   setCiphertext,
   setLivePreview,
   setSubMapping,
+  setSubstitutionMapping,
   clearSubMapping,
   setActiveLabTool,
   setAffineA,
   setAffineB,
+  setAffineKey,
   setCaesarShift,
   setVigenereKey,
   setToolsCollapsed,

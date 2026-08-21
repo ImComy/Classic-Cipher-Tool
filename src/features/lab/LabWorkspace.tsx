@@ -15,16 +15,18 @@ import { useLivePreview } from './useLivePreview';
 import { SubstitutionSolver } from './tools/SubstitutionSolver';
 import { CaesarLabTool } from './tools/CaesarLabTool';
 import { AffineLabTool } from './tools/AffineLabTool';
+import { AffineBruteForce } from './tools/AffineBruteForce';
 import { cleanText } from '../../lib/utils/string';
 
 // ===== Tool definition =====
 const TOOLS = [
   { id: 'substitution', name: 'Substitution Solver', component: SubstitutionSolver, icon: 'fa-font' },
-  { id: 'caesar', name: 'Caesar Brute Force', component: CaesarLabTool, icon: 'fa-list-ol' },
   { id: 'affine', name: 'Affine Cracker', component: AffineLabTool, icon: 'fa-sliders' },
+  { id: 'affine-bf', name: 'Affine Brute Force', component: AffineBruteForce, icon: 'fa-calculator' },
+  { id: 'caesar', name: 'Caesar Brute Force', component: CaesarLabTool, icon: 'fa-list-ol' },
 ] as const;
 
-type ToolId = typeof TOOLS[number]['id'];
+type ToolId = (typeof TOOLS)[number]['id'];
 
 // ===== Sub-component: ToolItem (memoized) =====
 interface ToolItemProps {
@@ -86,7 +88,7 @@ const ToolItem = memo(({ tool, isActive, isCollapsed, onToggle }: ToolItemProps)
         id={`tool-panel-${tool.id}`}
         className={`
           transition-all duration-300 ease-in-out overflow-hidden
-          ${isActive && !isCollapsed ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}
+          ${isActive && !isCollapsed ? 'max-h-150 opacity-100' : 'max-h-0 opacity-0'}
         `}
       >
         <div className="border-t border-gray-100 bg-gray-50/30">
@@ -216,7 +218,7 @@ export const LabWorkspace: React.FC = () => {
       <div className="flex-1 flex flex-col gap-4 min-w-0">
         {/* --- Ciphertext Source --- */}
         <section
-          className="lab-panel flex flex-col min-h-[160px] sm:min-h-[180px] lg:min-h-[220px] bg-white rounded-xl shadow-sm border border-gray-200"
+          className="lab-panel flex flex-col min-h-40 sm:min-h-45 lg:min-h-55 bg-white rounded-xl shadow-sm border border-gray-200"
           aria-label="Ciphertext input"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-100 shrink-0">
@@ -267,7 +269,7 @@ export const LabWorkspace: React.FC = () => {
           {!toolsCollapsed && (
             <div
               id="mobile-tools-panel"
-              className="border border-t-0 border-primary-200 rounded-b-xl bg-white/90 p-3 space-y-2 max-h-[400px] overflow-y-auto"
+              className="border border-t-0 border-primary-200 rounded-b-xl bg-white/90 p-3 space-y-2 max-h-100 overflow-y-auto"
             >
               {TOOLS.map((tool) => {
                 const isActive = activeLabTool === tool.id;
@@ -293,7 +295,7 @@ export const LabWorkspace: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => dispatch(openModal('analysisModal'))}
-                    className="flex-1 min-w-[80px] justify-center border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="flex-1 min-w-20 justify-center border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
                     <i className="fas fa-chart-bar mr-1.5" aria-hidden="true" /> Analysis
                   </Button>
@@ -301,7 +303,7 @@ export const LabWorkspace: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => dispatch(openModal('dictionaryModal'))}
-                    className="flex-1 min-w-[80px] justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex-1 min-w-20 justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-500"
                   >
                     <i className="fas fa-book mr-1.5" aria-hidden="true" /> Dictionary
                   </Button>
@@ -309,7 +311,7 @@ export const LabWorkspace: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => dispatch(openModal('toolsModal'))}
-                    className="flex-1 min-w-[80px] justify-center border-purple-200 text-purple-700 hover:bg-purple-50 focus-visible:ring-2 focus-visible:ring-purple-500"
+                    className="flex-1 min-w-20 justify-center border-purple-200 text-purple-700 hover:bg-purple-50 focus-visible:ring-2 focus-visible:ring-purple-500"
                   >
                     <i className="fas fa-tools mr-1.5" aria-hidden="true" /> Tools
                   </Button>
@@ -321,7 +323,7 @@ export const LabWorkspace: React.FC = () => {
 
         {/* --- Live Preview --- */}
         <section
-          className="lab-panel flex flex-col min-h-[160px] sm:min-h-[180px] lg:min-h-[220px] bg-white rounded-xl shadow-sm border border-indigo-200"
+          className="lab-panel flex flex-col min-h-40 sm:min-h-45 lg:min-h-55 bg-white rounded-xl shadow-sm border border-indigo-200"
           aria-label="Trial decryption preview"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-indigo-100 shrink-0 bg-indigo-50/30">
@@ -375,7 +377,7 @@ export const LabWorkspace: React.FC = () => {
 
       {/* ===== RIGHT SIDEBAR (desktop tools) ===== */}
       <aside
-        className="hidden lg:flex lg:w-80 xl:w-96 flex-shrink-0 self-start"
+        className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 self-start"
         aria-label="Analysis tools sidebar"
       >
         <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

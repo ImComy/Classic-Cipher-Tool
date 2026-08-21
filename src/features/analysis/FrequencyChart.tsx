@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { type FrequencyAnalysisResult, ENGLISH_FREQ } from '../../lib/utils/frequency'
 import { ALPHABET } from '../../lib/utils/string'
 import { RepeatedSubstringsView } from './RepeatedSubstringsView'
@@ -12,16 +12,44 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis, text }
   const { counts, total, unique, mostCommon, ic, percentages, kasiski } = analysis
 
   const icPct = Math.min((ic / 0.1) * 100, 100)
-
   const maxPct = Math.max(
     ...ALPHABET.split('').map(c => percentages[c] || 0),
     5
   )
   const scale = 140 / Math.max(maxPct, 5)
 
+  // English letters sorted by frequency descending
+  const englishOrder = Object.keys(ENGLISH_FREQ).sort((a, b) => ENGLISH_FREQ[b] - ENGLISH_FREQ[a])
+  // Cipher letters sorted by frequency descending
+  const cipherOrder = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
+
+  // Build mapping: each English letter maps to the corresponding cipher letter (by rank)
+  const mappingPairs = englishOrder.map((eng, idx) => ({
+    english: eng,
+    cipher: cipherOrder[idx] || '—',
+    engFreq: ENGLISH_FREQ[eng],
+    cipherFreq: cipherOrder[idx] ? (counts[cipherOrder[idx]] / total) * 100 : 0,
+    cipherCount: cipherOrder[idx] ? counts[cipherOrder[idx]] : 0,
+  }))
+
+  // State for showing all vs showing fewer
+  const [showAllMappings, setShowAllMappings] = useState(false)
+
+  // On mount, check screen width – show all on desktop (>= 640px)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)')
+    setShowAllMappings(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setShowAllMappings(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const displayedMappings = showAllMappings ? mappingPairs : mappingPairs.slice(0, 12)
+  const hasMore = mappingPairs.length > 12
+
   return (
     <div className="w-full">
-      {/* Stats summary */}
+      {/* 1. Stats summary */}
       <div id="analysisStats" className="flex flex-wrap gap-1.5 md:gap-3 mt-2 text-sm">
         <span className="bg-gray-50 px-3 py-0.5 rounded-full border border-gray-200">
           Letters: <strong className="text-gray-800">{total}</strong>
@@ -34,7 +62,113 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis, text }
         </span>
       </div>
 
-      {/* Index of Coincidence */}
+      {/* 2. Frequency Bar Chart + Legend */}
+      <div className="bg-white rounded border border-gray-200 p-3 mt-3 overflow-x-auto">
+        {total > 0 ? (
+          <>
+            {/* Bar chart with percentage labels above bars */}
+            <div className="flex items-end justify-center h-[180px] gap-1 overflow-hidden min-w-max">
+              {ALPHABET.split('').map(c => {
+                const pct = percentages[c] || 0
+                const eng = ENGLISH_FREQ[c] || 0
+                const h1 = Math.max(pct * scale, 2)
+                const h2 = Math.max(eng * scale, 2)
+
+                return (
+                  <div key={c} className="flex flex-col items-center justify-end flex-shrink-0">
+                    <div className="text-[8px] sm:text-[10px] font-mono text-gray-600 mb-0.5 whitespace-nowrap">
+                      {pct > 0 ? `${pct.toFixed(1)}%` : ''}
+                    </div>
+                    <div className="flex items-end gap-0.5">
+                      <div
+                        className="w-2 sm:w-2.5 md:w-3 bg-primary-500 rounded-t-sm"
+                        style={{ height: `${h1}px` }}
+                        title={`${c}: ${counts[c] || 0} (${pct.toFixed(1)}%)`}
+                      />
+                      <div
+                        className="w-2 sm:w-2.5 md:w-3 bg-accent-300 rounded-t-sm opacity-60"
+                        style={{ height: `${h2}px` }}
+                        title={`English average: ${eng}%`}
+                      />
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-1">{c}</div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-3 justify-center text-sm text-gray-600 mt-2">
+              <span>
+                <span className="inline-block w-3 h-3 rounded-sm bg-primary-500 align-middle mr-1.5"></span>{' '}
+                Your text
+              </span>
+              <span>
+                <span className="inline-block w-3 h-3 rounded-sm bg-accent-300 align-middle mr-1.5 opacity-60"></span>{' '}
+                English average
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="text-gray-400 text-sm text-center py-6">
+            Enter text in the main workspace and click Analyze.
+          </div>
+        )}
+      </div>
+
+      {/* ===== SECTION: Frequency Mapping Table (only) ===== */}
+      {total > 0 && (
+        <div className="mt-3 bg-white rounded border border-gray-200 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Frequency mapping (by rank)
+            </p>
+          </div>
+
+          {/* Responsive grid: 2 columns on larger, 1 on small */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            {displayedMappings.map(({ english, cipher, engFreq, cipherFreq, cipherCount }) => (
+              <div
+                key={english}
+                className="flex items-center justify-between px-2 py-1 bg-gray-50 rounded border border-gray-100 text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-gray-800 w-4">{english}</span>
+                  <span className="text-gray-400">→</span>
+                  <span className="font-mono text-gray-700 w-4">{cipher}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                  <span title="English frequency">{Math.round(engFreq * 100)}%</span>
+                  <span className="text-gray-300">|</span>
+                  <span title="Your frequency">{cipherFreq.toFixed(1)}%</span>
+                  <span className="text-gray-300">|</span>
+                  <span title="Occurrences" className="font-mono text-gray-600">
+                    {cipherCount}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Toggle button – centered below the table */}
+          {hasMore && (
+            <div className="flex justify-center mt-2">
+              <button
+                onClick={() => setShowAllMappings(!showAllMappings)}
+                className="px-4 py-1.5 text-sm font-medium bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+              >
+                {showAllMappings ? 'Show fewer' : 'Show all 26'}
+              </button>
+            </div>
+          )}
+
+          <p className="text-[0.6rem] text-gray-400 mt-1 text-center">
+            English letter → most frequent ciphertext letter at that rank. Count shows occurrences.
+          </p>
+        </div>
+      )}
+
+      {/* 3. Index of Coincidence */}
       <div className="mt-3 p-3 bg-gray-50 rounded border border-gray-200">
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-gray-700">Index of Coincidence (IC)</span>
@@ -55,7 +189,7 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis, text }
         </div>
       </div>
 
-      {/* Kasiski key-length analysis */}
+      {/* 4. Kasiski key‑length analysis */}
       <div className="bg-white rounded border border-gray-200 p-3 mt-2">
         <div className="flex flex-wrap justify-between items-center gap-2">
           <div>
@@ -105,58 +239,7 @@ export const FrequencyChart: React.FC<FrequencyChartProps> = ({ analysis, text }
         )}
       </div>
 
-      {/* Frequency Bar Chart */}
-      <div className="bg-white rounded border border-gray-200 p-3 mt-2 overflow-x-auto">
-        {total > 0 ? (
-          <>
-            <div className="flex items-end justify-center h-[150px] gap-1 overflow-hidden min-w-max">
-              {ALPHABET.split('').map(c => {
-                const pct = percentages[c] || 0
-                const eng = ENGLISH_FREQ[c] || 0
-                const h1 = Math.max(pct * scale, 2)
-                const h2 = Math.max(eng * scale, 2)
-
-                return (
-                  <div key={c} className="flex flex-col items-center justify-end flex-shrink-0">
-                    <div className="flex items-end gap-0.5">
-                      <div
-                        className="w-2 sm:w-2.5 md:w-3 bg-primary-500 rounded-t-sm"
-                        style={{ height: `${h1}px` }}
-                        title={`${c}: ${counts[c] || 0} (${pct.toFixed(1)}%)`}
-                      />
-                      <div
-                        className="w-2 sm:w-2.5 md:w-3 bg-accent-300 rounded-t-sm opacity-60"
-                        style={{ height: `${h2}px` }}
-                        title={`English average: ${eng}%`}
-                      />
-                    </div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 mt-1">{c}</div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="flex flex-wrap gap-3 justify-center text-sm text-gray-600 mt-2">
-              <span>
-                <span className="inline-block w-3 h-3 rounded-sm bg-primary-500 align-middle mr-1.5"></span>{' '}
-                Your text
-              </span>
-              <span>
-                <span className="inline-block w-3 h-3 rounded-sm bg-accent-300 align-middle mr-1.5 opacity-60"></span>{' '}
-                English average
-              </span>
-            </div>
-            <div className="text-gray-400 text-sm text-center mt-1" id="chartNote">
-              Based on {total} characters. Blue = your text, orange = English average.
-            </div>
-          </>
-        ) : (
-          <div className="text-gray-400 text-sm text-center py-6">
-            Enter text in the main workspace and click Analyze.
-          </div>
-        )}
-      </div>
-
-      {/* Repeated Substrings - now using the new component */}
+      {/* 5. Repeated Substrings – kept at the end */}
       <RepeatedSubstringsView text={text} />
     </div>
   )
